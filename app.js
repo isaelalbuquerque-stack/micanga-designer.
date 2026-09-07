@@ -290,7 +290,7 @@ async function generateProjectFromImage(){
 }
 
 
-const THEME_KEY = "jpMicangasTheme_v1";
+const THEME_KEY = "jpMicangasTheme_v2";
 
 function loadTheme(){
   try{
@@ -301,8 +301,8 @@ function loadTheme(){
 }
 
 function applyTheme(theme){
-  const appBg = theme.appBg || "#f6f1ec";
-  const gridBg = theme.gridBg || "#faf6f2";
+  const appBg = theme.appBg || "#f7efff";
+  const gridBg = theme.gridBg || "#fffaff";
   document.documentElement.style.setProperty("--bg", appBg);
   document.documentElement.style.setProperty("--grid-bg", gridBg);
   if($("appBgColor")) $("appBgColor").value = appBg;
@@ -317,7 +317,7 @@ function saveTheme(next){
 }
 
 function resetTheme(){
-  const theme={appBg:"#f6f1ec",gridBg:"#faf6f2"};
+  const theme={appBg:"#f7efff",gridBg:"#fffaff"};
   localStorage.setItem(THEME_KEY,JSON.stringify(theme));
   applyTheme(theme);
   toast("Cores de fundo restauradas");
@@ -505,7 +505,7 @@ $("appBgColor").oninput=(e)=>saveTheme({appBg:e.target.value});
 $("gridBgColor").oninput=(e)=>saveTheme({gridBg:e.target.value});
 $("resetBgBtn").onclick=resetTheme;
 $("bgQuickBtn").onclick=()=>{
-  const current=loadTheme().gridBg||"#faf6f2";
+  const current=loadTheme().gridBg||"#fffaff";
   const picked=prompt("Digite a cor hexadecimal do fundo da grade:",current);
   if(picked && /^#[0-9a-fA-F]{6}$/.test(picked.trim())){
     saveTheme({gridBg:picked.trim()});
