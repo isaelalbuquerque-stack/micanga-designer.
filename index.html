@@ -86,12 +86,22 @@
           <button id="eraseToolBtn" title="Borracha">🧽</button>
           <button id="undoBtn" title="Desfazer">↶</button>
           <button id="redoBtn" title="Refazer">↷</button>
-          <button id="symmetryBtn" title="Simetria">↔</button>
+          <button id="symmetryBtn" title="Simetria ao pintar">↔</button>
+          <button id="mirrorHBtn" title="Espelhar desenho horizontalmente">⇆</button>
+          <button id="mirrorVBtn" title="Espelhar desenho verticalmente">⇅</button>
+          <button id="zoomOutBtn" title="Diminuir zoom">−</button>
+          <button id="zoomResetBtn" title="Zoom atual">100%</button>
+          <button id="zoomInBtn" title="Aumentar zoom">＋</button>
+          <button id="loomBtn" title="Visualização de tear">🧵</button>
           <button id="clearBtn" title="Limpar">🗑</button>
           <button id="saveBtn" class="saveTool" title="Salvar">💾</button>
         </div>
 
         <div class="canvasCard card">
+          <div class="canvasTop">
+            <span id="viewModeLabel">Modo: Grade</span>
+            <span id="zoomLabel">Zoom 100%</span>
+          </div>
           <div id="gridViewport">
             <div id="beadGrid" aria-label="Grade de miçangas"></div>
           </div>
