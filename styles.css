@@ -27,11 +27,11 @@ main{padding:14px;max-width:900px;margin:0 auto}
 .formCard label{display:grid;gap:7px;margin:14px 0;color:var(--muted);font-weight:600}
 input,select{width:100%;border:1px solid var(--border);background:#fff;padding:13px;border-radius:12px;color:var(--text)}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.rowBtns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
-.toolbar{display:grid;grid-template-columns:repeat(8,1fr);gap:7px;padding:8px;position:sticky;top:77px;z-index:15}
+.toolbar{display:grid;grid-template-columns:repeat(15,minmax(44px,1fr));gap:7px;padding:8px;position:sticky;top:77px;z-index:15;overflow-x:auto;scrollbar-width:auto}
 .toolbar button{padding:10px 4px;background:#f0e7e2}.toolbar .activeTool{outline:2px solid var(--primary);background:#e4d3ca}.toolbar .saveTool{background:var(--primary);color:#fff}
 .canvasCard{padding:8px;overflow:hidden}
-#gridViewport{overflow:auto;max-height:56vh;min-height:260px;touch-action:pan-x pan-y;background:linear-gradient(45deg,#faf6f2 25%,transparent 25%),linear-gradient(-45deg,#faf6f2 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#faf6f2 75%),linear-gradient(-45deg,transparent 75%,#faf6f2 75%);background-size:18px 18px;background-position:0 0,0 9px,9px -9px,-9px 0}
-#beadGrid{display:grid;gap:3px;padding:18px;width:max-content;min-width:100%}
+#gridViewport{overflow:auto;max-height:64vh;min-height:300px;touch-action:none;overscroll-behavior:contain;scrollbar-gutter:stable both-edges;position:relative;background:linear-gradient(45deg,#faf6f2 25%,transparent 25%),linear-gradient(-45deg,#faf6f2 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#faf6f2 75%),linear-gradient(-45deg,transparent 75%,#faf6f2 75%);background-size:18px 18px;background-position:0 0,0 9px,9px -9px,-9px 0}
+#beadGrid{display:grid;gap:3px;padding:18px;width:max-content;min-width:100%;transform-origin:top left;will-change:transform;position:relative;z-index:2}
 .bead{width:28px;height:28px;border-radius:50%;border:1px solid rgba(0,0,0,.13);background:#f7f2ef;box-shadow:inset 0 2px 4px rgba(255,255,255,.8),0 1px 2px rgba(0,0,0,.08);touch-action:none}
 .bead.empty{background:#f4eee9;border-style:dashed;opacity:.65}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);text-align:center;padding:12px 6px}.stats div{display:grid;gap:2px}.stats strong{font-size:1rem}.stats span{font-size:.72rem;color:var(--muted)}
@@ -44,3 +44,65 @@ input,select{width:100%;border:1px solid var(--border);background:#fff;padding:1
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:#2f2622;color:white;padding:10px 14px;border-radius:12px;opacity:0;pointer-events:none;transition:.2s;z-index:99}.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .hidden{display:none!important}
 @media (min-width:700px){.bead{width:31px;height:31px}.toolbar{top:78px}}
+
+
+.canvasTop{display:flex;justify-content:space-between;align-items:center;padding:2px 4px 8px;color:var(--muted);font-size:.82rem;font-weight:700}
+#zoomResetBtn{min-width:66px;font-size:.75rem;font-weight:800}
+#loomBtn.activeTool{outline:2px solid var(--primary);background:#e4d3ca}
+
+/* Barras de rolagem maiores */
+#gridViewport::-webkit-scrollbar,
+.paletteColors::-webkit-scrollbar,
+.toolbar::-webkit-scrollbar{height:16px;width:16px}
+#gridViewport::-webkit-scrollbar-thumb,
+.paletteColors::-webkit-scrollbar-thumb,
+.toolbar::-webkit-scrollbar-thumb{background:#92786b;border-radius:12px;border:3px solid #f6f1ec}
+#gridViewport::-webkit-scrollbar-track,
+.paletteColors::-webkit-scrollbar-track,
+.toolbar::-webkit-scrollbar-track{background:#eee5e0;border-radius:12px}
+.paletteColors{min-height:70px;padding-bottom:13px;scrollbar-width:auto}
+.colorSwatch{min-width:46px;width:46px;height:46px}
+
+/* Tear realista */
+#gridViewport.loomMode{
+  background:
+    repeating-linear-gradient(90deg,
+      rgba(119,85,58,.22) 0px,
+      rgba(119,85,58,.22) 1px,
+      transparent 1px,
+      transparent 31px),
+    repeating-linear-gradient(0deg,
+      rgba(119,85,58,.12) 0px,
+      rgba(119,85,58,.12) 1px,
+      transparent 1px,
+      transparent 31px),
+    #fbf7f3;
+}
+#gridViewport.loomMode::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  z-index:1;
+  background:
+    repeating-linear-gradient(90deg,
+      transparent 0 13px,
+      rgba(181,143,109,.38) 13px 15px,
+      transparent 15px 31px);
+}
+#gridViewport.loomMode .bead{
+  border-radius:42%;
+  box-shadow:
+    inset 0 2px 2px rgba(255,255,255,.55),
+    inset 0 -2px 2px rgba(0,0,0,.10),
+    0 1px 1px rgba(0,0,0,.12);
+}
+#gridViewport.loomMode .bead::after{
+  content:"";
+  display:block;
+  width:3px;
+  height:18px;
+  margin:4px auto 0;
+  border-radius:3px;
+  background:rgba(65,45,30,.25);
+}
