@@ -1,6 +1,6 @@
 {
-  "name": "Miçanga Designer",
-  "short_name": "Miçangas",
+  "name": "JPmicangas Designer",
+  "short_name": "JPmicangas",
   "description": "Crie diagramas de brincos e peças com miçangas.",
   "start_url": "./",
   "display": "standalone",
