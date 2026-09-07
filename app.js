@@ -12,7 +12,31 @@ const defaultPalette = [
   {id:"c5", name:"Amarelo", code:"005", hex:"#f0c533"},
   {id:"c6", name:"Verde", code:"006", hex:"#2e9d59"},
   {id:"c7", name:"Dourado", code:"007", hex:"#c7952f"},
-  {id:"c8", name:"Rosa", code:"008", hex:"#e46e9f"}
+  {id:"c8", name:"Rosa", code:"008", hex:"#e46e9f"},
+  {id:"c9", name:"Laranja", code:"009", hex:"#f07a24"},
+  {id:"c10", name:"Roxo", code:"010", hex:"#7b43a6"},
+  {id:"c11", name:"Lilás", code:"011", hex:"#b78bd4"},
+  {id:"c12", name:"Turquesa", code:"012", hex:"#27b7b2"},
+  {id:"c13", name:"Azul claro", code:"013", hex:"#69aef5"},
+  {id:"c14", name:"Azul marinho", code:"014", hex:"#173a73"},
+  {id:"c15", name:"Verde limão", code:"015", hex:"#8bcf3f"},
+  {id:"c16", name:"Verde escuro", code:"016", hex:"#17633b"},
+  {id:"c17", name:"Bege", code:"017", hex:"#d7bea6"},
+  {id:"c18", name:"Marrom", code:"018", hex:"#79513d"},
+  {id:"c19", name:"Cinza", code:"019", hex:"#8f9297"},
+  {id:"c20", name:"Prata", code:"020", hex:"#c7cbd1"},
+  {id:"c21", name:"Vinho", code:"021", hex:"#7f213d"},
+  {id:"c22", name:"Coral", code:"022", hex:"#ef6f61"},
+  {id:"c23", name:"Magenta", code:"023", hex:"#c82c85"},
+  {id:"c24", name:"Creme", code:"024", hex:"#f2e6c9"},
+  {id:"c25", name:"Cobre", code:"025", hex:"#b66a3c"},
+  {id:"c26", name:"Champagne", code:"026", hex:"#dfc993"},
+  {id:"c27", name:"Verde água", code:"027", hex:"#65c6b8"},
+  {id:"c28", name:"Azul petróleo", code:"028", hex:"#245b66"},
+  {id:"c29", name:"Rosa claro", code:"029", hex:"#f4b1ca"},
+  {id:"c30", name:"Mostarda", code:"030", hex:"#b98d22"},
+  {id:"c31", name:"Terracota", code:"031", hex:"#b75f43"},
+  {id:"c32", name:"Grafite", code:"032", hex:"#4d5056"}
 ];
 
 let project = null;
@@ -23,6 +47,103 @@ let undoStack = [];
 let redoStack = [];
 let isPointerDown = false;
 let deferredPrompt = null;
+let zoomLevel = 1;
+const ZOOM_MIN = 0.5;
+const ZOOM_MAX = 2.5;
+const ZOOM_STEP = 0.15;
+let pinchStartDistance = 0;
+let pinchStartZoom = 1;
+let panStart = null;
+let loomMode = false;
+
+
+function ensurePalette(p){
+  if(!p.palette) p.palette=[];
+  defaultPalette.forEach(c=>{
+    if(!p.palette.some(x=>x.id===c.id)) p.palette.push({...c});
+  });
+  return p;
+}
+
+function clampZoom(v){ return Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, v)); }
+
+function applyZoom(nextZoom, focusX=null, focusY=null){
+  const viewport=$("gridViewport"), grid=$("beadGrid");
+  if(!viewport||!grid) return;
+  const old=zoomLevel, next=clampZoom(nextZoom);
+  if(focusX===null) focusX=viewport.clientWidth/2;
+  if(focusY===null) focusY=viewport.clientHeight/2;
+  const contentX=(viewport.scrollLeft+focusX)/old;
+  const contentY=(viewport.scrollTop+focusY)/old;
+  zoomLevel=next;
+  grid.style.transform=`scale(${zoomLevel})`;
+  grid.style.marginRight=`${Math.max(0,(zoomLevel-1)*grid.scrollWidth)}px`;
+  grid.style.marginBottom=`${Math.max(0,(zoomLevel-1)*grid.scrollHeight)}px`;
+  viewport.scrollLeft=contentX*zoomLevel-focusX;
+  viewport.scrollTop=contentY*zoomLevel-focusY;
+  const pct=Math.round(zoomLevel*100);
+  $("zoomResetBtn").textContent=`${pct}%`;
+  $("zoomLabel").textContent=`Zoom ${pct}%`;
+}
+
+function touchDistance(a,b){ return Math.hypot(b.clientX-a.clientX,b.clientY-a.clientY); }
+
+function setupZoomGestures(){
+  const viewport=$("gridViewport");
+  if(!viewport||viewport.dataset.zoomReady) return;
+  viewport.dataset.zoomReady="1";
+  viewport.addEventListener("touchstart",(e)=>{
+    if(e.touches.length===2){
+      e.preventDefault();
+      pinchStartDistance=touchDistance(e.touches[0],e.touches[1]);
+      pinchStartZoom=zoomLevel;
+    }else if(e.touches.length===1 && zoomLevel>1){
+      panStart={x:e.touches[0].clientX,y:e.touches[0].clientY,left:viewport.scrollLeft,top:viewport.scrollTop};
+    }
+  },{passive:false});
+  viewport.addEventListener("touchmove",(e)=>{
+    if(e.touches.length===2 && pinchStartDistance){
+      e.preventDefault();
+      const rect=viewport.getBoundingClientRect();
+      const cx=((e.touches[0].clientX+e.touches[1].clientX)/2)-rect.left;
+      const cy=((e.touches[0].clientY+e.touches[1].clientY)/2)-rect.top;
+      const d=touchDistance(e.touches[0],e.touches[1]);
+      applyZoom(pinchStartZoom*(d/pinchStartDistance),cx,cy);
+    }else if(e.touches.length===1 && panStart && zoomLevel>1){
+      e.preventDefault();
+      const t=e.touches[0];
+      viewport.scrollLeft=panStart.left-(t.clientX-panStart.x);
+      viewport.scrollTop=panStart.top-(t.clientY-panStart.y);
+    }
+  },{passive:false});
+  viewport.addEventListener("touchend",(e)=>{
+    if(e.touches.length<2) pinchStartDistance=0;
+    if(e.touches.length===0) panStart=null;
+  });
+}
+
+function setLoomMode(on){
+  loomMode=on;
+  $("gridViewport").classList.toggle("loomMode",loomMode);
+  $("loomBtn").classList.toggle("activeTool",loomMode);
+  $("viewModeLabel").textContent=loomMode?"Modo: Tear realista":"Modo: Grade";
+}
+
+function mirrorHorizontal(){
+  if(!project) return;
+  pushHistory();
+  project.grid=project.grid.map(row=>[...row].reverse());
+  renderGrid();
+  toast("Desenho espelhado horizontalmente");
+}
+
+function mirrorVertical(){
+  if(!project) return;
+  pushHistory();
+  project.grid=[...project.grid].reverse().map(row=>[...row]);
+  renderGrid();
+  toast("Desenho espelhado verticalmente");
+}
 
 function showView(id){
   views.forEach(v=>$(v).classList.toggle("active",v===id));
@@ -51,7 +172,7 @@ function setProjectLabel(){
 function newProjectData(){
   const rows = Math.max(4,Math.min(60,Number($("rowsInput").value)||18));
   const cols = Math.max(4,Math.min(40,Number($("colsInput").value)||12));
-  return {
+  return ensurePalette({
     id:uid(),
     name:$("projectName").value.trim()||"Meu brinco",
     rows, cols,
@@ -61,7 +182,7 @@ function newProjectData(){
     grid:Array.from({length:rows},()=>Array(cols).fill(null)),
     createdAt:new Date().toISOString(),
     updatedAt:new Date().toISOString()
-  }
+  });
 }
 
 function renderGrid(){
@@ -176,10 +297,10 @@ function updateLastProject(){
 }
 
 function openProject(p){
-  project=JSON.parse(JSON.stringify(p));
+  project=ensurePalette(JSON.parse(JSON.stringify(p)));
   selectedColor=project.palette?.[0]?.id || defaultPalette[0].id;
   tool="paint"; symmetry=false; undoStack=[]; redoStack=[];
-  setProjectLabel(); renderPalette(); updateToolButtons(); renderGrid(); showView("editorView");
+  zoomLevel=1; setProjectLabel(); renderPalette(); updateToolButtons(); renderGrid(); showView("editorView"); setupZoomGestures(); applyZoom(1); setLoomMode(project.technique==="Tear");
 }
 
 function renderProjects(){
@@ -205,7 +326,7 @@ $("newProjectBtn").onclick=()=>showView("newProjectView");
 $("cancelNewBtn").onclick=()=>showView("homeView");
 $("createProjectBtn").onclick=()=>{
   project=newProjectData(); selectedColor=project.palette[0].id; undoStack=[]; redoStack=[];
-  setProjectLabel(); renderPalette(); updateToolButtons(); renderGrid(); showView("editorView");
+  zoomLevel=1; setProjectLabel(); renderPalette(); updateToolButtons(); renderGrid(); showView("editorView"); setupZoomGestures(); applyZoom(1); setLoomMode(project.technique==="Tear");
 }
 $("backHomeBtn").onclick=()=>{saveCurrent(); showView("homeView"); setProjectLabel()}
 $("openProjectsBtn").onclick=()=>{renderProjects(); showView("projectsView")}
@@ -225,6 +346,14 @@ $("clearBtn").onclick=()=>{
   if(!project||!confirm("Limpar todo o desenho?"))return;
   pushHistory(); project.grid=Array.from({length:project.rows},()=>Array(project.cols).fill(null)); renderGrid();
 }
+
+$("mirrorHBtn").onclick=mirrorHorizontal;
+$("mirrorVBtn").onclick=mirrorVertical;
+$("zoomOutBtn").onclick=()=>applyZoom(zoomLevel-ZOOM_STEP);
+$("zoomInBtn").onclick=()=>applyZoom(zoomLevel+ZOOM_STEP);
+$("zoomResetBtn").onclick=()=>applyZoom(1);
+$("loomBtn").onclick=()=>setLoomMode(!loomMode);
+
 $("saveBtn").onclick=saveCurrent;
 $("addColorBtn").onclick=()=>{
   if(!project)return;
