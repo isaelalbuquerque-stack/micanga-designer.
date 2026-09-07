@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
+  <meta name="theme-color" content="#6d4c41" />
+  <meta name="description" content="Crie diagramas de brincos e peças com miçangas direto no celular." />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="stylesheet" href="styles.css" />
+  <title>Miçanga Designer</title>
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div>
+        <h1>Miçanga Designer</h1>
+        <p id="projectLabel">Novo projeto</p>
+      </div>
+      <button id="installBtn" class="ghost hidden">Instalar</button>
+    </header>
+
+    <main>
+      <section id="homeView" class="view active">
+        <div class="hero card">
+          <div class="logoBead">M</div>
+          <div>
+            <h2>Crie seu diagrama</h2>
+            <p>Desenhe, conte as cores e salve seus modelos de miçangas.</p>
+          </div>
+        </div>
+
+        <div class="homeActions">
+          <button id="newProjectBtn" class="primary big">＋ Criar novo diagrama</button>
+          <button id="openProjectsBtn" class="secondary big">📁 Meus projetos</button>
+        </div>
+
+        <div class="card">
+          <h3>Último projeto</h3>
+          <div id="lastProject">Nenhum projeto salvo ainda.</div>
+        </div>
+      </section>
+
+      <section id="newProjectView" class="view">
+        <div class="card formCard">
+          <h2>Novo projeto</h2>
+          <label>Nome do projeto
+            <input id="projectName" value="Meu brinco" />
+          </label>
+          <div class="grid2">
+            <label>Linhas
+              <input id="rowsInput" type="number" min="4" max="60" value="18" />
+            </label>
+            <label>Colunas
+              <input id="colsInput" type="number" min="4" max="40" value="12" />
+            </label>
+          </div>
+          <label>Tamanho da miçanga
+            <select id="beadSizeInput">
+              <option value="2">2 mm</option>
+              <option value="3" selected>3 mm</option>
+              <option value="4">4 mm</option>
+            </select>
+          </label>
+          <label>Técnica
+            <select id="techniqueInput">
+              <option>Grade reta</option>
+              <option>Brick Stitch</option>
+              <option>Peyote</option>
+              <option>Tear</option>
+              <option>Franjas</option>
+            </select>
+          </label>
+          <div class="rowBtns">
+            <button id="cancelNewBtn" class="secondary">Cancelar</button>
+            <button id="createProjectBtn" class="primary">Criar</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="editorView" class="view editorView">
+        <div class="toolbar card">
+          <button id="backHomeBtn" title="Início">⌂</button>
+          <button id="paintToolBtn" class="activeTool" title="Pincel">✏️</button>
+          <button id="eraseToolBtn" title="Borracha">🧽</button>
+          <button id="undoBtn" title="Desfazer">↶</button>
+          <button id="redoBtn" title="Refazer">↷</button>
+          <button id="symmetryBtn" title="Simetria">↔</button>
+          <button id="clearBtn" title="Limpar">🗑</button>
+          <button id="saveBtn" class="saveTool" title="Salvar">💾</button>
+        </div>
+
+        <div class="canvasCard card">
+          <div id="gridViewport">
+            <div id="beadGrid" aria-label="Grade de miçangas"></div>
+          </div>
+        </div>
+
+        <div class="stats card">
+          <div><strong id="totalBeads">0</strong><span>Miçangas</span></div>
+          <div><strong id="totalColors">0</strong><span>Cores</span></div>
+          <div><strong id="dimensions">0 × 0 cm</strong><span>Aprox.</span></div>
+        </div>
+
+        <div class="palette card">
+          <div class="paletteHead">
+            <h3>Paleta</h3>
+            <button id="addColorBtn" class="small">＋ Cor</button>
+          </div>
+          <div id="paletteColors" class="paletteColors"></div>
+        </div>
+
+        <div class="card">
+          <div class="paletteHead">
+            <h3>Lista de miçangas</h3>
+          </div>
+          <div id="materialsList" class="materialsList"></div>
+        </div>
+      </section>
+
+      <section id="projectsView" class="view">
+        <div class="card">
+          <div class="projectsHead">
+            <button id="projectsBackBtn" class="secondary">← Voltar</button>
+            <h2>Meus projetos</h2>
+          </div>
+          <div id="projectsList"></div>
+        </div>
+      </section>
+    </main>
+
+    <div id="toast" class="toast"></div>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
