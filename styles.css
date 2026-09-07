@@ -1,6 +1,7 @@
 
 :root{
   --bg:#f6f1ec;
+  --grid-bg:#faf6f2;
   --card:#fffdfb;
   --text:#2f2622;
   --muted:#786c66;
@@ -30,7 +31,7 @@ input,select{width:100%;border:1px solid var(--border);background:#fff;padding:1
 .toolbar{display:grid;grid-template-columns:repeat(15,minmax(44px,1fr));gap:7px;padding:8px;position:sticky;top:77px;z-index:15;overflow-x:auto;scrollbar-width:auto}
 .toolbar button{padding:10px 4px;background:#f0e7e2}.toolbar .activeTool{outline:2px solid var(--primary);background:#e4d3ca}.toolbar .saveTool{background:var(--primary);color:#fff}
 .canvasCard{padding:8px;overflow:hidden}
-#gridViewport{overflow:auto;max-height:64vh;min-height:300px;touch-action:none;overscroll-behavior:contain;scrollbar-gutter:stable both-edges;position:relative;background:linear-gradient(45deg,#faf6f2 25%,transparent 25%),linear-gradient(-45deg,#faf6f2 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#faf6f2 75%),linear-gradient(-45deg,transparent 75%,#faf6f2 75%);background-size:18px 18px;background-position:0 0,0 9px,9px -9px,-9px 0}
+#gridViewport{background-color:var(--grid-bg);overflow:auto;max-height:64vh;min-height:300px;touch-action:none;overscroll-behavior:contain;scrollbar-gutter:stable both-edges;position:relative;background:linear-gradient(45deg,#faf6f2 25%,transparent 25%),linear-gradient(-45deg,#faf6f2 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#faf6f2 75%),linear-gradient(-45deg,transparent 75%,#faf6f2 75%);background-size:18px 18px;background-position:0 0,0 9px,9px -9px,-9px 0}
 #beadGrid{display:grid;gap:3px;padding:18px;width:max-content;min-width:100%;transform-origin:top left;will-change:transform;position:relative;z-index:2}
 .bead{width:28px;height:28px;border-radius:50%;border:1px solid rgba(0,0,0,.13);background:#f7f2ef;box-shadow:inset 0 2px 4px rgba(255,255,255,.8),0 1px 2px rgba(0,0,0,.08);touch-action:none}
 .bead.empty{background:#f4eee9;border-style:dashed;opacity:.65}
@@ -106,3 +107,16 @@ input,select{width:100%;border:1px solid var(--border);background:#fff;padding:1
   border-radius:3px;
   background:rgba(65,45,30,.25);
 }
+
+
+.helperText{color:var(--muted);margin-top:-4px}
+.imagePreviewWrap{margin:12px 0;border:1px solid var(--border);border-radius:16px;overflow:hidden;background:#f3ece7;display:grid;place-items:center;min-height:180px}
+.imagePreviewWrap img{max-width:100%;max-height:360px;display:block}
+.imagePreviewWrap.hidden{display:none}
+
+
+.backgroundSettings{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+.backgroundSettings label{display:grid;gap:7px;color:var(--muted);font-weight:700;font-size:.9rem}
+.backgroundSettings input[type="color"]{width:100%;height:48px;padding:4px;border-radius:12px;border:1px solid var(--border);background:#fff}
+.bgResetBtn{margin-top:12px;width:100%}
+@media(max-width:520px){.backgroundSettings{grid-template-columns:1fr}}
