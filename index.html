@@ -3,20 +3,23 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
-  <meta name="theme-color" content="#6d4c41" />
+  <meta name="theme-color" content="#8b5cf6" />
   <meta name="description" content="Crie diagramas de brincos e peças com miçangas direto no celular." />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icons/icon-192.png" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
   <link rel="stylesheet" href="styles.css" />
-  <title>JPmicangas Designer</title>
+  <title>JPmiçangas Designer</title>
 </head>
 <body>
   <div id="app">
     <header class="topbar">
-      <div>
-        <h1>JPmicangas Designer</h1>
-        <p id="projectLabel">Novo projeto</p>
+      <div class="topbarBrand">
+        <img class="topbarLogo" src="icons/icon-192.png" alt="" />
+        <div>
+          <h1>JPmiçangas Designer</h1>
+          <p id="projectLabel">Novo projeto</p>
+        </div>
       </div>
       <button id="installBtn" class="ghost hidden">Instalar</button>
     </header>
@@ -24,7 +27,7 @@
     <main>
       <section id="homeView" class="view active">
         <div class="hero card">
-          <div class="logoBead">M</div>
+          <img class="brandLogo" src="icons/logo-jpmicangas.png" alt="Logo JPmiçangas Designer" />
           <div>
             <h2>Crie seu diagrama</h2>
             <p>Desenhe, conte as cores e salve seus modelos de miçangas.</p>
@@ -48,10 +51,10 @@
           </div>
           <div class="backgroundSettings">
             <label>Cor de fundo do aplicativo
-              <input id="appBgColor" type="color" value="#f6f1ec" />
+              <input id="appBgColor" type="color" value="#f7efff" />
             </label>
             <label>Cor de fundo da grade
-              <input id="gridBgColor" type="color" value="#faf6f2" />
+              <input id="gridBgColor" type="color" value="#fffaff" />
             </label>
           </div>
           <button id="resetBgBtn" class="secondary bgResetBtn">Restaurar cores padrão</button>
