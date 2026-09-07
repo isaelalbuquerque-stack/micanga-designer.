@@ -9,13 +9,13 @@
   <link rel="icon" href="icons/icon-192.png" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
   <link rel="stylesheet" href="styles.css" />
-  <title>Miçanga Designer</title>
+  <title>JPmicangas Designer</title>
 </head>
 <body>
   <div id="app">
     <header class="topbar">
       <div>
-        <h1>Miçanga Designer</h1>
+        <h1>JPmicangas Designer</h1>
         <p id="projectLabel">Novo projeto</p>
       </div>
       <button id="installBtn" class="ghost hidden">Instalar</button>
@@ -33,12 +33,28 @@
 
         <div class="homeActions">
           <button id="newProjectBtn" class="primary big">＋ Criar novo diagrama</button>
+          <button id="imageProjectBtn" class="secondary big">🖼️ Imagem → Diagrama</button>
           <button id="openProjectsBtn" class="secondary big">📁 Meus projetos</button>
         </div>
 
         <div class="card">
           <h3>Último projeto</h3>
           <div id="lastProject">Nenhum projeto salvo ainda.</div>
+        </div>
+
+        <div class="card">
+          <div class="paletteHead">
+            <h3>Personalização</h3>
+          </div>
+          <div class="backgroundSettings">
+            <label>Cor de fundo do aplicativo
+              <input id="appBgColor" type="color" value="#f6f1ec" />
+            </label>
+            <label>Cor de fundo da grade
+              <input id="gridBgColor" type="color" value="#faf6f2" />
+            </label>
+          </div>
+          <button id="resetBgBtn" class="secondary bgResetBtn">Restaurar cores padrão</button>
         </div>
       </section>
 
@@ -93,6 +109,7 @@
           <button id="zoomResetBtn" title="Zoom atual">100%</button>
           <button id="zoomInBtn" title="Aumentar zoom">＋</button>
           <button id="loomBtn" title="Visualização de tear">🧵</button>
+          <button id="bgQuickBtn" title="Mudar fundo">🎨</button>
           <button id="clearBtn" title="Limpar">🗑</button>
           <button id="saveBtn" class="saveTool" title="Salvar">💾</button>
         </div>
@@ -126,6 +143,66 @@
             <h3>Lista de miçangas</h3>
           </div>
           <div id="materialsList" class="materialsList"></div>
+        </div>
+      </section>
+
+
+      <section id="imageProjectView" class="view">
+        <div class="card formCard">
+          <h2>Imagem → Diagrama</h2>
+          <p class="helperText">Envie uma foto de um brinco. O processamento acontece no próprio aparelho.</p>
+
+          <label>Foto do brinco
+            <input id="imageInput" type="file" accept="image/*" />
+          </label>
+
+          <div id="imagePreviewWrap" class="imagePreviewWrap hidden">
+            <img id="imagePreview" alt="Prévia da imagem selecionada" />
+          </div>
+
+          <div class="grid2">
+            <label>Largura do diagrama
+              <select id="imageColsInput">
+                <option value="12">12 colunas</option>
+                <option value="16">16 colunas</option>
+                <option value="20" selected>20 colunas</option>
+                <option value="24">24 colunas</option>
+                <option value="28">28 colunas</option>
+                <option value="32">32 colunas</option>
+                <option value="40">40 colunas</option>
+              </select>
+            </label>
+
+            <label>Quantidade de cores
+              <select id="imageColorsInput">
+                <option value="4">4 cores</option>
+                <option value="6">6 cores</option>
+                <option value="8" selected>8 cores</option>
+                <option value="12">12 cores</option>
+                <option value="16">16 cores</option>
+                <option value="24">24 cores</option>
+              </select>
+            </label>
+          </div>
+
+          <label>Fundo da imagem
+            <select id="backgroundModeInput">
+              <option value="none">Não remover</option>
+              <option value="light" selected>Ignorar fundo claro</option>
+              <option value="dark">Ignorar fundo escuro</option>
+            </select>
+          </label>
+
+          <label>Nome do projeto
+            <input id="imageProjectName" value="Brinco convertido" />
+          </label>
+
+          <div class="rowBtns">
+            <button id="cancelImageBtn" class="secondary">Cancelar</button>
+            <button id="generateFromImageBtn" class="primary">Gerar diagrama</button>
+          </div>
+
+          <canvas id="imageProcessCanvas" class="hidden"></canvas>
         </div>
       </section>
 
