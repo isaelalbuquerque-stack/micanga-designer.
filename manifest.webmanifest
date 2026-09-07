@@ -1,11 +1,11 @@
 {
-  "name": "JPmicangas Designer",
-  "short_name": "JPmicangas",
-  "description": "Crie diagramas de brincos e peças com miçangas.",
+  "name": "JPmiçangas Designer",
+  "short_name": "JPmiçangas",
+  "description": "Crie, planeje e personalize diagramas de miçangas direto no celular.",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#f6f1ec",
-  "theme_color": "#6d4c41",
+  "background_color": "#f7efff",
+  "theme_color": "#8b5cf6",
   "orientation": "portrait-primary",
   "icons": [
     {
