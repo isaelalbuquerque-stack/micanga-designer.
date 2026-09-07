@@ -1,6 +1,6 @@
 
 const $ = (id)=>document.getElementById(id);
-const views = ["homeView","newProjectView","editorView","projectsView"];
+const views = ["homeView","newProjectView","imageProjectView","editorView","projectsView"];
 const STORAGE_KEY = "micangaDesignerProjects_v1";
 const ACTIVE_KEY = "micangaDesignerActive_v1";
 
@@ -55,6 +55,7 @@ let pinchStartDistance = 0;
 let pinchStartZoom = 1;
 let panStart = null;
 let loomMode = false;
+let uploadedImage = null;
 
 
 function ensurePalette(p){
@@ -143,6 +144,183 @@ function mirrorVertical(){
   project.grid=[...project.grid].reverse().map(row=>[...row]);
   renderGrid();
   toast("Desenho espelhado verticalmente");
+}
+
+
+function colorDistance(a,b){
+  const dr=a[0]-b[0], dg=a[1]-b[1], db=a[2]-b[2];
+  return dr*dr+dg*dg+db*db;
+}
+
+function rgbToHex(r,g,b){
+  return "#"+[r,g,b].map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,"0")).join("");
+}
+
+function isBackgroundPixel(r,g,b,mode){
+  if(mode==="light") return r>235 && g>235 && b>235;
+  if(mode==="dark") return r<25 && g<25 && b<25;
+  return false;
+}
+
+function buildQuantizedPalette(pixels, maxColors, bgMode){
+  const buckets = new Map();
+  for(let i=0;i<pixels.length;i+=4){
+    const r=pixels[i], g=pixels[i+1], b=pixels[i+2], a=pixels[i+3];
+    if(a<100 || isBackgroundPixel(r,g,b,bgMode)) continue;
+    const qr=Math.round(r/32)*32, qg=Math.round(g/32)*32, qb=Math.round(b/32)*32;
+    const key=`${qr},${qg},${qb}`;
+    buckets.set(key,(buckets.get(key)||0)+1);
+  }
+  return [...buckets.entries()]
+    .sort((a,b)=>b[1]-a[1])
+    .slice(0,maxColors)
+    .map(([key],idx)=>{
+      const [r,g,b]=key.split(",").map(Number);
+      return {id:`img_${Date.now()}_${idx}`,name:`Cor imagem ${idx+1}`,code:`IMG${String(idx+1).padStart(2,"0")}`,hex:rgbToHex(r,g,b),rgb:[r,g,b]};
+    });
+}
+
+function nearestPaletteId(r,g,b,palette){
+  let best=palette[0], bestD=Infinity;
+  palette.forEach(c=>{
+    const rgb=c.rgb || [
+      parseInt(c.hex.slice(1,3),16),
+      parseInt(c.hex.slice(3,5),16),
+      parseInt(c.hex.slice(5,7),16)
+    ];
+    const d=colorDistance([r,g,b],rgb);
+    if(d<bestD){bestD=d;best=c;}
+  });
+  return best?.id || null;
+}
+
+function cropTransparentBounds(ctx,w,h,bgMode){
+  const data=ctx.getImageData(0,0,w,h).data;
+  let minX=w,minY=h,maxX=-1,maxY=-1;
+  for(let y=0;y<h;y++){
+    for(let x=0;x<w;x++){
+      const i=(y*w+x)*4;
+      const r=data[i],g=data[i+1],b=data[i+2],a=data[i+3];
+      if(a>100 && !isBackgroundPixel(r,g,b,bgMode)){
+        if(x<minX)minX=x;if(x>maxX)maxX=x;if(y<minY)minY=y;if(y>maxY)maxY=y;
+      }
+    }
+  }
+  if(maxX<0) return {x:0,y:0,w,h};
+  return {x:minX,y:minY,w:maxX-minX+1,h:maxY-minY+1};
+}
+
+async function generateProjectFromImage(){
+  if(!uploadedImage){
+    toast("Escolha uma imagem primeiro");
+    return;
+  }
+
+  const cols = Number($("imageColsInput").value)||20;
+  const maxColors = Number($("imageColorsInput").value)||8;
+  const bgMode = $("backgroundModeInput").value;
+  const name = $("imageProjectName").value.trim() || "Brinco convertido";
+
+  const canvas=$("imageProcessCanvas");
+  const ctx=canvas.getContext("2d",{willReadFrequently:true});
+
+  const maxSide=800;
+  const scale=Math.min(1,maxSide/Math.max(uploadedImage.naturalWidth,uploadedImage.naturalHeight));
+  canvas.width=Math.max(1,Math.round(uploadedImage.naturalWidth*scale));
+  canvas.height=Math.max(1,Math.round(uploadedImage.naturalHeight*scale));
+  ctx.drawImage(uploadedImage,0,0,canvas.width,canvas.height);
+
+  const crop=cropTransparentBounds(ctx,canvas.width,canvas.height,bgMode);
+  const aspect=crop.h/crop.w;
+  const rows=Math.max(4,Math.min(80,Math.round(cols*aspect)));
+
+  const sample=document.createElement("canvas");
+  sample.width=cols;
+  sample.height=rows;
+  const sctx=sample.getContext("2d",{willReadFrequently:true});
+  sctx.imageSmoothingEnabled=true;
+  sctx.drawImage(canvas,crop.x,crop.y,crop.w,crop.h,0,0,cols,rows);
+
+  const imgData=sctx.getImageData(0,0,cols,rows);
+  const imgPalette=buildQuantizedPalette(imgData.data,maxColors,bgMode);
+
+  if(!imgPalette.length){
+    toast("Não consegui identificar cores úteis");
+    return;
+  }
+
+  const grid=Array.from({length:rows},()=>Array(cols).fill(null));
+  for(let y=0;y<rows;y++){
+    for(let x=0;x<cols;x++){
+      const i=(y*cols+x)*4;
+      const r=imgData.data[i],g=imgData.data[i+1],b=imgData.data[i+2],a=imgData.data[i+3];
+      if(a<100 || isBackgroundPixel(r,g,b,bgMode)) continue;
+      grid[y][x]=nearestPaletteId(r,g,b,imgPalette);
+    }
+  }
+
+  project={
+    id:uid(),
+    name,
+    rows,cols,
+    beadSize:3,
+    technique:"Grade reta",
+    palette:imgPalette.map(({rgb,...rest})=>rest),
+    grid,
+    createdAt:new Date().toISOString(),
+    updatedAt:new Date().toISOString(),
+    source:"image"
+  };
+
+  selectedColor=project.palette[0].id;
+  tool="paint";
+  symmetry=false;
+  undoStack=[];
+  redoStack=[];
+  zoomLevel=1;
+  setProjectLabel();
+  renderPalette();
+  updateToolButtons();
+  renderGrid();
+  showView("editorView");
+  if(typeof setupZoomGestures==="function") setupZoomGestures();
+  if(typeof applyZoom==="function") applyZoom(1);
+  if(typeof setLoomMode==="function") setLoomMode(false);
+  toast("Diagrama criado a partir da imagem");
+}
+
+
+const THEME_KEY = "jpMicangasTheme_v1";
+
+function loadTheme(){
+  try{
+    return JSON.parse(localStorage.getItem(THEME_KEY)||"{}");
+  }catch{
+    return {};
+  }
+}
+
+function applyTheme(theme){
+  const appBg = theme.appBg || "#f6f1ec";
+  const gridBg = theme.gridBg || "#faf6f2";
+  document.documentElement.style.setProperty("--bg", appBg);
+  document.documentElement.style.setProperty("--grid-bg", gridBg);
+  if($("appBgColor")) $("appBgColor").value = appBg;
+  if($("gridBgColor")) $("gridBgColor").value = gridBg;
+}
+
+function saveTheme(next){
+  const current = loadTheme();
+  const merged = {...current,...next};
+  localStorage.setItem(THEME_KEY,JSON.stringify(merged));
+  applyTheme(merged);
+}
+
+function resetTheme(){
+  const theme={appBg:"#f6f1ec",gridBg:"#faf6f2"};
+  localStorage.setItem(THEME_KEY,JSON.stringify(theme));
+  applyTheme(theme);
+  toast("Cores de fundo restauradas");
 }
 
 function showView(id){
@@ -322,7 +500,37 @@ function renderProjects(){
 }
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
 
+
+$("appBgColor").oninput=(e)=>saveTheme({appBg:e.target.value});
+$("gridBgColor").oninput=(e)=>saveTheme({gridBg:e.target.value});
+$("resetBgBtn").onclick=resetTheme;
+$("bgQuickBtn").onclick=()=>{
+  const current=loadTheme().gridBg||"#faf6f2";
+  const picked=prompt("Digite a cor hexadecimal do fundo da grade:",current);
+  if(picked && /^#[0-9a-fA-F]{6}$/.test(picked.trim())){
+    saveTheme({gridBg:picked.trim()});
+    toast("Fundo da grade alterado");
+  }else if(picked){
+    toast("Use formato #RRGGBB");
+  }
+};
+
 $("newProjectBtn").onclick=()=>showView("newProjectView");
+$("imageProjectBtn").onclick=()=>showView("imageProjectView");
+$("cancelImageBtn").onclick=()=>showView("homeView");
+$("imageInput").onchange=(e)=>{
+  const file=e.target.files?.[0];
+  if(!file) return;
+  const url=URL.createObjectURL(file);
+  const img=new Image();
+  img.onload=()=>{
+    uploadedImage=img;
+    $("imagePreview").src=url;
+    $("imagePreviewWrap").classList.remove("hidden");
+  };
+  img.src=url;
+};
+$("generateFromImageBtn").onclick=generateProjectFromImage;
 $("cancelNewBtn").onclick=()=>showView("homeView");
 $("createProjectBtn").onclick=()=>{
   project=newProjectData(); selectedColor=project.palette[0].id; undoStack=[]; redoStack=[];
@@ -377,5 +585,6 @@ if("serviceWorker" in navigator){
   window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js"));
 }
 
+applyTheme(loadTheme());
 updateLastProject();
 setProjectLabel();
