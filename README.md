@@ -104,3 +104,17 @@ Observação: a conversão é aproximada. Fotos com fundo simples, boa iluminaç
 - Cache offline V5
 
 A associação direta do arquivo `.jpm` depende do suporte do navegador/sistema operacional. O botão “Importar projeto .JPM” funciona como alternativa segura.
+
+
+## V6 — Digitalização fiel e edição rápida
+- Detecção automática de cores da foto
+- Quantidade de cores automática ou manual a partir de 2 cores
+- Cores informadas pelo usuário por nome, código ou hexadecimal
+- Agrupamento de cores com média real da fotografia
+- Comparação de cor perceptual em LAB
+- Prévia das cores detectadas
+- Paleta flutuante e arrastável na tela
+- Paleta recolhível
+- Código da miçanga visível na paleta
+- Ferramenta de seleção de cor diretamente pela célula
+- Busca de miçanga por nome ou código ao editar a célula
