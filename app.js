@@ -511,7 +511,9 @@ function renderGrid(){
       const color=project.palette.find(x=>x.id===colorId);
       if(color) bead.style.background=color.hex;
       bead.addEventListener("pointerdown",(e)=>{
-        e.preventDefault(); isPointerDown=true; pushHistory(); applyAt(r,c);
+        e.preventDefault();
+        if(tool==="cellpick"){ openCellColorPicker(r,c); return; }
+        isPointerDown=true; pushHistory(); applyAt(r,c);
         bead.setPointerCapture?.(e.pointerId);
       });
       bead.addEventListener("pointerenter",()=>{
@@ -558,6 +560,7 @@ function renderPalette(){
     b.className="colorSwatch"+(color.id===selectedColor?" selected":"");
     b.style.background=color.hex;
     b.title=`${color.name} (${color.code})`;
+    b.dataset.code=color.code||"";
     b.onclick=()=>{selectedColor=color.id; tool="paint"; updateToolButtons(); renderPalette()};
     wrap.appendChild(b);
   })
@@ -566,6 +569,7 @@ function renderPalette(){
 function updateToolButtons(){
   $("paintToolBtn").classList.toggle("activeTool",tool==="paint");
   $("eraseToolBtn").classList.toggle("activeTool",tool==="erase");
+  $("cellColorToolBtn")?.classList.toggle("activeTool",tool==="cellpick");
   $("symmetryBtn").classList.toggle("activeTool",symmetry);
 }
 
@@ -677,6 +681,7 @@ $("openProjectsBtn").onclick=()=>{renderProjects(); showView("projectsView")}
 $("projectsBackBtn").onclick=()=>showView("homeView");
 $("paintToolBtn").onclick=()=>{tool="paint";updateToolButtons()}
 $("eraseToolBtn").onclick=()=>{tool="erase";updateToolButtons()}
+$("cellColorToolBtn").onclick=()=>{tool=tool==="cellpick"?"paint":"cellpick";updateToolButtons();toast(tool==="cellpick"?"Toque numa célula para escolher a cor":"Seleção por célula desligada")}
 $("symmetryBtn").onclick=()=>{symmetry=!symmetry;updateToolButtons();toast(symmetry?"Simetria ligada":"Simetria desligada")}
 $("undoBtn").onclick=()=>{
   if(!project||!undoStack.length)return;
@@ -719,6 +724,50 @@ $("addColorBtn").onclick=()=>{
   project.palette.push({id,name,code,hex});
   selectedColor=id; renderPalette(); updateStats();
 }
+
+
+// ===== V6: cores fiéis, detecção automática, paleta flutuante e seleção por célula =====
+let cellPickerTarget=null;
+function hexRgb(hex){hex=String(hex||"").replace("#","");if(hex.length===3)hex=hex.split("").map(x=>x+x).join("");return [parseInt(hex.slice(0,2),16)||0,parseInt(hex.slice(2,4),16)||0,parseInt(hex.slice(4,6),16)||0]}
+function rgbLab(r,g,b){
+  let v=[r,g,b].map(x=>{x/=255;return x>.04045?Math.pow((x+.055)/1.055,2.4):x/12.92});
+  let x=(v[0]*.4124+v[1]*.3576+v[2]*.1805)/.95047,y=(v[0]*.2126+v[1]*.7152+v[2]*.0722),z=(v[0]*.0193+v[1]*.1192+v[2]*.9505)/1.08883;
+  [x,y,z]=[x,y,z].map(t=>t>.008856?Math.cbrt(t):(7.787*t+16/116));return [116*y-16,500*(x-y),200*(y-z)];
+}
+function labDist(a,b){return (a[0]-b[0])**2+(a[1]-b[1])**2+(a[2]-b[2])**2}
+function nearestPaletteIdLab(r,g,b,palette){const lab=rgbLab(r,g,b);let best=null,bd=Infinity;for(const c of palette){const rgb=c.rgb||hexRgb(c.hex),d=labDist(lab,rgbLab(...rgb));if(d<bd){bd=d;best=c}}return best?.id||null}
+function usefulPixels(data,bgMode,step=1){const out=[];for(let i=0;i<data.length;i+=4*step){const r=data[i],g=data[i+1],b=data[i+2],a=data[i+3];if(a<100||isBackgroundPixel(r,g,b,bgMode))continue;out.push([r,g,b])}return out}
+function autoColorCount(pixels){const bins=new Set();for(let i=0;i<pixels.length;i+=Math.max(1,Math.floor(pixels.length/5000))){const [r,g,b]=pixels[i];bins.add(`${r>>5},${g>>5},${b>>5}`)}const n=bins.size;return Math.max(2,Math.min(16,Math.round(Math.sqrt(n)*1.35)))}
+function kmeansPalette(pixels,k){
+  if(!pixels.length)return[];k=Math.max(2,Math.min(k,pixels.length));
+  const sample=pixels.length>12000?pixels.filter((_,i)=>i%Math.ceil(pixels.length/12000)===0):pixels;
+  let centers=[];centers.push(sample[Math.floor(sample.length/2)]);while(centers.length<k){let best=sample[0],bd=-1;for(let i=0;i<sample.length;i+=Math.max(1,Math.floor(sample.length/2500))){const p=sample[i];const d=Math.min(...centers.map(c=>colorDistance(p,c)));if(d>bd){bd=d;best=p}}centers.push([...best])}
+  for(let it=0;it<8;it++){const sums=Array.from({length:k},()=>[0,0,0,0]);for(const px of sample){let bi=0,bd=Infinity;centers.forEach((c,j)=>{const d=colorDistance(px,c);if(d<bd){bd=d;bi=j}});sums[bi][0]+=px[0];sums[bi][1]+=px[1];sums[bi][2]+=px[2];sums[bi][3]++}centers=sums.map((q,i)=>q[3]?[q[0]/q[3],q[1]/q[3],q[2]/q[3]]:centers[i])}
+  return centers.map((rgb,i)=>({id:`img_${Date.now()}_${i}`,name:`Cor detectada ${i+1}`,code:`IMG${String(i+1).padStart(2,"0")}`,hex:rgbToHex(...rgb),rgb}));
+}
+function manualPalette(text){const parts=String(text||"").split(",").map(x=>x.trim()).filter(Boolean);return parts.map((v,i)=>{let base=defaultPalette.find(c=>c.name.toLowerCase()===v.toLowerCase()||c.code===v);let hex=/^#[0-9a-f]{6}$/i.test(v)?v:(base?.hex||null);if(!hex)return null;return {id:`manual_${Date.now()}_${i}`,name:base?.name||`Cor informada ${i+1}`,code:base?.code||`MAN${String(i+1).padStart(2,"0")}`,hex,rgb:hexRgb(hex)}}).filter(Boolean)}
+function showDetectedPalette(pal){const box=$("detectedColorsBox"),wrap=$("detectedColorsPreview");if(!box||!wrap)return;wrap.innerHTML="";pal.forEach(c=>{const d=document.createElement("span");d.className="detectedChip";d.innerHTML=`<i style="background:${c.hex}"></i>${c.hex}`;wrap.appendChild(d)});box.classList.toggle("hidden",!pal.length)}
+function imageAnalysisCanvas(){if(!uploadedImage)return null;const canvas=$("imageProcessCanvas"),ctx=canvas.getContext("2d",{willReadFrequently:true});const scale=Math.min(1,800/Math.max(uploadedImage.naturalWidth,uploadedImage.naturalHeight));canvas.width=Math.max(1,Math.round(uploadedImage.naturalWidth*scale));canvas.height=Math.max(1,Math.round(uploadedImage.naturalHeight*scale));ctx.drawImage(uploadedImage,0,0,canvas.width,canvas.height);return {canvas,ctx}}
+function detectCurrentImageColors(){if(!uploadedImage){toast("Escolha uma imagem primeiro");return[]}const a=imageAnalysisCanvas(),mode=$("backgroundModeInput").value,data=a.ctx.getImageData(0,0,a.canvas.width,a.canvas.height).data,pix=usefulPixels(data,mode,2);const val=$("imageColorsInput").value,k=val==="auto"?autoColorCount(pix):Math.max(2,Number(val)||8),pal=kmeansPalette(pix,k);showDetectedPalette(pal);toast(`${pal.length} cores detectadas`);return pal}
+$("detectImageColorsBtn").onclick=detectCurrentImageColors;
+
+async function generateProjectFromImageV6(){
+  if(!uploadedImage){toast("Escolha uma imagem primeiro");return}
+  const cols=Number($("imageColsInput").value)||20,bgMode=$("backgroundModeInput").value,name=$("imageProjectName").value.trim()||"Brinco convertido";
+  const a=imageAnalysisCanvas(),crop=cropTransparentBounds(a.ctx,a.canvas.width,a.canvas.height,bgMode),aspect=crop.h/crop.w,rows=Math.max(4,Math.min(80,Math.round(cols*aspect)));
+  const sample=document.createElement("canvas");sample.width=cols;sample.height=rows;const sctx=sample.getContext("2d",{willReadFrequently:true});sctx.imageSmoothingEnabled=true;sctx.drawImage(a.canvas,crop.x,crop.y,crop.w,crop.h,0,0,cols,rows);const imgData=sctx.getImageData(0,0,cols,rows);
+  let imgPalette=manualPalette($("manualImageColors").value);if(!imgPalette.length){const hi=document.createElement("canvas");hi.width=Math.min(300,crop.w);hi.height=Math.max(1,Math.round(hi.width*crop.h/crop.w));const hctx=hi.getContext("2d",{willReadFrequently:true});hctx.drawImage(a.canvas,crop.x,crop.y,crop.w,crop.h,0,0,hi.width,hi.height);const pix=usefulPixels(hctx.getImageData(0,0,hi.width,hi.height).data,bgMode);const val=$("imageColorsInput").value,k=val==="auto"?autoColorCount(pix):Math.max(2,Number(val)||8);imgPalette=kmeansPalette(pix,k)}
+  if(!imgPalette.length){toast("Não consegui identificar cores úteis");return}showDetectedPalette(imgPalette);
+  const grid=Array.from({length:rows},()=>Array(cols).fill(null));for(let y=0;y<rows;y++)for(let x=0;x<cols;x++){const i=(y*cols+x)*4,r=imgData.data[i],g=imgData.data[i+1],b=imgData.data[i+2],alpha=imgData.data[i+3];if(alpha<100||isBackgroundPixel(r,g,b,bgMode))continue;grid[y][x]=nearestPaletteIdLab(r,g,b,imgPalette)}
+  project={id:uid(),name,rows,cols,beadSize:3,technique:"Grade reta",palette:imgPalette.map(({rgb,...rest})=>rest),grid,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),source:"image-v6"};selectedColor=project.palette[0].id;tool="paint";symmetry=false;undoStack=[];redoStack=[];zoomLevel=1;setProjectLabel();renderPalette();updateToolButtons();renderGrid();showView("editorView");setupZoomGestures();applyZoom(1);setLoomMode(false);toast("Diagrama criado com cores fiéis")
+}
+$("generateFromImageBtn").onclick=generateProjectFromImageV6;
+
+function openCellColorPicker(r,c){cellPickerTarget={r,c};$("cellPickerTitle").textContent=`Célula ${columnLabel(c)}${r+1} — escolher cor`;$("cellColorSearch").value="";renderCellColorOptions();$("cellColorPicker").classList.remove("hidden")}
+function renderCellColorOptions(){if(!project)return;const q=$("cellColorSearch").value.trim().toLowerCase(),wrap=$("cellColorOptions");wrap.innerHTML="";project.palette.filter(c=>!q||c.name.toLowerCase().includes(q)||String(c.code).toLowerCase().includes(q)).forEach(c=>{const b=document.createElement("button");b.className="cellColorOption";b.innerHTML=`<span class="cellColorOptionDot" style="background:${c.hex}"></span><span><strong>${escapeHtml(c.name)}</strong><small>Cód. ${escapeHtml(c.code||"")} · ${c.hex}</small></span>`;b.onclick=()=>{if(!cellPickerTarget)return;pushHistory();selectedColor=c.id;project.grid[cellPickerTarget.r][cellPickerTarget.c]=c.id;renderGrid();renderPalette();$("cellColorPicker").classList.add("hidden");toast(`Cor ${c.code||c.name} aplicada`)};wrap.appendChild(b)})}
+$("cellColorSearch").oninput=renderCellColorOptions;$("closeCellPickerBtn").onclick=()=>$("cellColorPicker").classList.add("hidden");
+
+(function setupFloatingPalette(){const pal=$("floatingPalette"),handle=$("paletteDragHandle");if(!pal||!handle)return;let drag=null;handle.addEventListener("pointerdown",e=>{if(e.target.closest("button"))return;const r=pal.getBoundingClientRect();drag={dx:e.clientX-r.left,dy:e.clientY-r.top};pal.style.bottom="auto";handle.setPointerCapture?.(e.pointerId)});handle.addEventListener("pointermove",e=>{if(!drag)return;const x=Math.max(0,Math.min(innerWidth-pal.offsetWidth,e.clientX-drag.dx)),y=Math.max(0,Math.min(innerHeight-pal.offsetHeight,e.clientY-drag.dy));pal.style.left=x+"px";pal.style.top=y+"px"});handle.addEventListener("pointerup",()=>drag=null);handle.addEventListener("pointercancel",()=>drag=null);$("collapsePaletteBtn").onclick=()=>{pal.classList.toggle("collapsed");$("collapsePaletteBtn").textContent=pal.classList.contains("collapsed")?"＋":"−"}})();
 
 window.addEventListener("beforeinstallprompt",(e)=>{
   e.preventDefault(); deferredPrompt=e; $("installBtn").classList.remove("hidden");
