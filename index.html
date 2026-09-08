@@ -105,6 +105,7 @@
           <button id="backHomeBtn" title="Início">⌂</button>
           <button id="paintToolBtn" class="activeTool" title="Pincel">✏️</button>
           <button id="eraseToolBtn" title="Borracha">🧽</button>
+          <button id="cellColorToolBtn" title="Escolher cor ao tocar na célula">🎯</button>
           <button id="undoBtn" title="Desfazer">↶</button>
           <button id="redoBtn" title="Refazer">↷</button>
           <button id="symmetryBtn" title="Simetria ao pintar">↔</button>
@@ -151,10 +152,10 @@
           <div><strong id="dimensions">0 × 0 cm</strong><span>Aprox.</span></div>
         </div>
 
-        <div class="palette card">
-          <div class="paletteHead">
-            <h3>Paleta</h3>
-            <button id="addColorBtn" class="small">＋ Cor</button>
+        <div id="floatingPalette" class="palette card floatingPalette">
+          <div id="paletteDragHandle" class="paletteHead paletteDragHandle">
+            <h3>Paleta <small>↕ arraste</small></h3>
+            <div class="paletteHeadActions"><button id="collapsePaletteBtn" class="small" title="Recolher paleta">−</button><button id="addColorBtn" class="small">＋ Cor</button></div>
           </div>
           <div id="paletteColors" class="paletteColors"></div>
         </div>
@@ -206,6 +207,14 @@
             </label>
           </div>
 
+          <label>Cores presentes (opcional)
+            <input id="manualImageColors" placeholder="Ex.: preto, branco, #d4af37, vermelho" />
+            <small class="helperText">Se informar cores, o app prioriza exatamente essas referências. Separe por vírgulas.</small>
+          </label>
+
+          <div id="detectedColorsBox" class="detectedColorsBox hidden"><strong>Cores detectadas</strong><div id="detectedColorsPreview"></div></div>
+          <button id="detectImageColorsBtn" class="secondary" type="button">🔎 Detectar cores da foto</button>
+
           <label>Fundo da imagem
             <select id="backgroundModeInput">
               <option value="none">Não remover</option>
@@ -238,6 +247,11 @@
       </section>
     </main>
 
+    <div id="cellColorPicker" class="cellColorPicker hidden" role="dialog" aria-label="Escolher cor da célula">
+      <div class="cellPickerHead"><strong id="cellPickerTitle">Escolher miçanga</strong><button id="closeCellPickerBtn">×</button></div>
+      <input id="cellColorSearch" placeholder="Buscar por nome ou código" />
+      <div id="cellColorOptions" class="cellColorOptions"></div>
+    </div>
     <div id="toast" class="toast"></div>
   </div>
   <script src="app.js"></script>
