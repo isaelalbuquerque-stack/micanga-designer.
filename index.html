@@ -38,6 +38,8 @@
           <button id="newProjectBtn" class="primary big">＋ Criar novo diagrama</button>
           <button id="imageProjectBtn" class="secondary big">🖼️ Imagem → Diagrama</button>
           <button id="openProjectsBtn" class="secondary big">📁 Meus projetos</button>
+          <button id="importProjectBtn" class="secondary big">📥 Importar projeto .JPM</button>
+          <input id="projectFileInput" type="file" accept=".jpm,application/json,application/x-jpmicangas" class="hidden" />
         </div>
 
         <div class="card">
@@ -112,9 +114,14 @@
           <button id="zoomResetBtn" title="Zoom atual">100%</button>
           <button id="zoomInBtn" title="Aumentar zoom">＋</button>
           <button id="loomBtn" title="Visualização de tear">🧵</button>
+          <button id="rotateBtn" title="Girar 90°">⟳</button>
           <button id="bgQuickBtn" title="Mudar fundo">🎨</button>
           <button id="clearBtn" title="Limpar">🗑</button>
           <button id="saveBtn" class="saveTool" title="Salvar">💾</button>
+          <button id="saveAsBtn" title="Salvar como">📝</button>
+          <button id="exportJpegBtn" title="Salvar JPEG">JPG</button>
+          <button id="exportPdfBtn" title="Salvar PDF">PDF</button>
+          <button id="shareProjectBtn" title="Compartilhar projeto .JPM">↗</button>
         </div>
 
         <div class="canvasCard card">
@@ -122,8 +129,19 @@
             <span id="viewModeLabel">Modo: Grade</span>
             <span id="zoomLabel">Zoom 100%</span>
           </div>
+          <div class="fileActions">
+            <button id="quickJpmBtn" class="secondary">Projeto .JPM</button>
+            <button id="quickJpegBtn" class="secondary">JPEG</button>
+            <button id="quickPdfBtn" class="secondary">PDF</button>
+            <button id="quickShareBtn" class="secondary">Compartilhar</button>
+          </div>
           <div id="gridViewport">
-            <div id="beadGrid" aria-label="Grade de miçangas"></div>
+            <div id="gridStage">
+              <div class="rulerCorner" aria-hidden="true"></div>
+              <div id="columnRuler" class="columnRuler" aria-label="Colunas"></div>
+              <div id="rowRuler" class="rowRuler" aria-label="Linhas"></div>
+              <div id="beadGrid" aria-label="Grade de miçangas"></div>
+            </div>
           </div>
         </div>
 
