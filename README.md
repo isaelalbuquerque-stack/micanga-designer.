@@ -214,3 +214,10 @@ A associação direta do arquivo `.jpm` depende do suporte do navegador/sistema 
 - Redimensiona o diagrama antes de abrir no editor.
 - Novos modelos detalhados de Flamengo e Vasco para grades maiores.
 - Mantidos os modelos simples para peças pequenas.
+
+## V5.15 — ficha completa, realismo e bloqueios reforçados
+- Novo modelo Bandeira do Brasil realista 35×53 com losango proporcional, globo azul, faixa branca curva e estrelas.
+- Cartões da biblioteca mostram grade, técnica, cores e quantidade de miçangas; modelos detalhados exibem nível de detalhe.
+- Mantida a personalização de linhas, colunas, tamanho da miçanga e quantidade de cores.
+- Barra de botões e paleta permanecem travadas acima da área de edição.
+- Tabela permanece contida no visor e as réguas horizontal, vertical e canto ficam sticky durante a movimentação.

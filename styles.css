@@ -758,3 +758,19 @@ button{transition:transform .12s ease,box-shadow .18s ease,filter .18s ease}
 .templateCustomize label{font-size:.66rem;color:var(--muted);font-weight:750;display:grid;gap:3px}
 .templateCustomize input{width:100%;min-width:0;padding:7px 6px;border:1px solid var(--border);border-radius:8px;font-size:.82rem;background:#fff}
 .templateSizeInfo{font-size:.68rem;font-weight:800;color:var(--primary-dark);background:var(--lilac-soft);padding:6px 8px;border-radius:8px}
+
+/* =========================================================
+   V5.15 — bloqueios reforçados + ficha/modelos realistas
+   ========================================================= */
+.templateDetail{font-size:.68rem!important;font-weight:800;color:var(--primary-dark)!important;background:var(--lilac-soft);padding:5px 7px;border-radius:8px}
+/* As barras nunca entram na área rolável da tabela. */
+.editorView .toolbar{position:sticky!important;top:69px!important;z-index:80!important}
+.editorView .editorPaletteBar{position:sticky!important;top:111px!important;z-index:79!important}
+.editorView .canvasCard{position:relative;z-index:1;overflow:hidden!important}
+.editorView #gridViewport{position:relative!important;overflow:auto!important;isolation:isolate;contain:paint;z-index:1}
+/* Réguas bloqueadas no próprio visor da tabela. */
+#gridViewport .rulerCorner{position:sticky!important;top:0!important;left:0!important;z-index:103!important;background:var(--grid-bg)!important}
+#gridViewport .columnRuler{position:sticky!important;top:0!important;z-index:102!important;background:var(--grid-bg)!important}
+#gridViewport .rowRuler{position:sticky!important;left:0!important;z-index:101!important;background:var(--grid-bg)!important}
+@media(min-width:521px){.editorView .toolbar{top:77px!important}.editorView .editorPaletteBar{top:119px!important}}
+@media(max-width:520px){.editorView .editorPaletteBar{top:107px!important}}
