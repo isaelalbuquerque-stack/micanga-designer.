@@ -74,32 +74,16 @@ input,select{width:100%;border:1px solid var(--border);background:#fff;padding:1
 .paletteColors{min-height:70px;padding-bottom:13px;scrollbar-width:auto}
 .colorSwatch{min-width:46px;width:46px;height:46px}
 
-/* Tear realista */
+/* Tear realista — V5.18
+   Fundo limpo: removidas as linhas grandes do tear que apareciam fora do desenho.
+   O efeito realista permanece somente nas próprias miçangas. */
 #gridViewport.loomMode{
-  background:
-    repeating-linear-gradient(90deg,
-      rgba(119,85,58,.22) 0px,
-      rgba(119,85,58,.22) 1px,
-      transparent 1px,
-      transparent 31px),
-    repeating-linear-gradient(0deg,
-      rgba(119,85,58,.12) 0px,
-      rgba(119,85,58,.12) 1px,
-      transparent 1px,
-      transparent 31px),
-    #fbf7f3;
+  background:var(--grid-bg) !important;
 }
 #gridViewport.loomMode::before{
-  content:"";
-  position:absolute;
-  inset:0;
-  pointer-events:none;
-  z-index:1;
-  background:
-    repeating-linear-gradient(90deg,
-      transparent 0 13px,
-      rgba(181,143,109,.38) 13px 15px,
-      transparent 15px 31px);
+  content:none !important;
+  display:none !important;
+  background:none !important;
 }
 #gridViewport.loomMode .bead{
   border-radius:42%;
@@ -841,4 +825,42 @@ button{transition:transform .12s ease,box-shadow .18s ease,filter .18s ease}
 @media(min-width:521px){
   .editorView .toolbar{top:76px !important}
   .editorView .editorPaletteBar{top:116px !important}
+}
+
+
+/* V5.18 — sem linhas de fundo no modo Tear realista */
+.editorView #gridViewport.loomMode{
+  background:var(--grid-bg) !important;
+  background-image:none !important;
+}
+.editorView #gridViewport.loomMode::before{
+  content:none !important;
+  display:none !important;
+  background:none !important;
+}
+
+
+/* =========================================================
+   V5.19 — seleção de linhas e cópia estilo Excel
+   ========================================================= */
+.rowSelectionBar{
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  margin:7px 0 8px;padding:7px 8px;border:1px solid var(--border);
+  border-radius:10px;background:var(--lilac-soft);font-size:.78rem;
+}
+.rowSelectionBar:not(.active){opacity:.78}
+.rowSelectionInfo{margin-right:auto;min-width:110px;color:var(--primary-dark)}
+.rowRepeatLabel{display:flex;align-items:center;gap:4px;font-weight:700;color:var(--muted)}
+.rowRepeatLabel input{width:48px;padding:6px 4px;text-align:center;border:1px solid var(--border);border-radius:8px;background:#fff}
+.rowSelectionBar button{min-height:31px;padding:6px 9px;font-size:.76rem;border-radius:8px}
+.rowSelectCell{appearance:none;-webkit-appearance:none;padding:0;margin:0;font:inherit;color:inherit;cursor:pointer}
+.rowSelectCell.selectedRowRuler{
+  background:#7c3aed !important;color:#fff !important;font-weight:900 !important;
+  box-shadow:inset 0 0 0 2px #fff,0 0 0 1px #7c3aed !important;
+}
+#beadGrid .bead.selectedRowBead{outline:2px solid rgba(124,58,237,.42);outline-offset:-2px}
+@media(max-width:520px){
+  .rowSelectionBar{gap:4px;padding:6px}
+  .rowSelectionBar button{padding:5px 7px}
+  .rowSelectionInfo{width:100%;margin-right:0}
 }

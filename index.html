@@ -72,7 +72,7 @@
           </label>
           <div class="grid2">
             <label>Linhas
-              <input id="rowsInput" type="number" min="4" max="60" value="18" />
+              <input id="rowsInput" type="number" min="4" max="500" value="18" />
             </label>
             <label>Colunas
               <input id="colsInput" type="number" min="4" max="40" value="12" />
@@ -142,6 +142,13 @@
             <button id="quickJpegBtn" class="secondary">JPG</button>
             <button id="quickPdfBtn" class="secondary">PDF</button>
             <button id="quickShareBtn" class="secondary">↗ Compartilhar</button>
+          </div>
+          <div id="rowSelectionBar" class="rowSelectionBar" aria-label="Ferramentas de linhas">
+            <div class="rowSelectionInfo"><strong>Linhas:</strong> <span id="rowSelectionCount">Nenhuma linha</span></div>
+            <label class="rowRepeatLabel">Repetir <input id="rowCopyRepeat" type="number" min="1" max="99" value="1" inputmode="numeric" /></label>
+            <button id="copyRowsUpBtn" type="button" class="secondary" disabled>↑ Copiar</button>
+            <button id="copyRowsDownBtn" type="button" class="secondary" disabled>↓ Copiar</button>
+            <button id="clearRowSelectionBtn" type="button" class="secondary" title="Limpar seleção">✕</button>
           </div>
           <div id="gridViewport">
             <div id="gridStage">

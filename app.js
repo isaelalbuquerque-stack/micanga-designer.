@@ -61,6 +61,7 @@ let selectedColor = defaultPalette[0].id;
 let symmetry = false;
 let undoStack = [];
 let redoStack = [];
+let selectedRows = new Set();
 let isPointerDown = false;
 let deferredPrompt = null;
 let zoomLevel = 1;
@@ -343,9 +344,78 @@ function renderRulers(){
     const el=document.createElement("div"); el.className="rulerCell"; el.textContent=columnLabel(c); cols.appendChild(el);
   }
   for(let r=0;r<project.rows;r++){
-    const el=document.createElement("div"); el.className="rulerCell"; el.textContent=String(r+1); rows.appendChild(el);
+    const el=document.createElement("button");
+    el.type="button";
+    el.className="rulerCell rowSelectCell"+(selectedRows.has(r)?" selectedRowRuler":"");
+    el.textContent=String(r+1);
+    el.title=`Selecionar linha ${r+1}`;
+    el.setAttribute("aria-pressed", selectedRows.has(r)?"true":"false");
+    el.onclick=(e)=>{e.preventDefault();e.stopPropagation();toggleRowSelection(r)};
+    rows.appendChild(el);
   }
+  updateRowSelectionBar();
 }
+// V5.19 — seleção de múltiplas linhas pela régua + preenchimento estilo Excel.
+function toggleRowSelection(r){
+  if(!project || r<0 || r>=project.rows) return;
+  if(selectedRows.has(r)) selectedRows.delete(r); else selectedRows.add(r);
+  renderGrid();
+  const n=selectedRows.size;
+  toast(n?`${n} linha${n>1?"s":""} selecionada${n>1?"s":""}`:"Seleção de linhas limpa");
+}
+function clearRowSelection(){
+  selectedRows.clear();
+  renderGrid();
+}
+function updateRowSelectionBar(){
+  const bar=$("rowSelectionBar"), count=$("rowSelectionCount");
+  if(!bar||!count) return;
+  const n=selectedRows.size;
+  count.textContent=n?`${n} linha${n>1?"s":""}`:"Nenhuma linha";
+  bar.classList.toggle("active",n>0);
+  const disabled=n===0;
+  if($("copyRowsUpBtn")) $("copyRowsUpBtn").disabled=disabled;
+  if($("copyRowsDownBtn")) $("copyRowsDownBtn").disabled=disabled;
+}
+function selectedRowPattern(){
+  return [...selectedRows].filter(r=>r>=0&&r<project.rows).sort((a,b)=>a-b).map(r=>project.grid[r].slice());
+}
+function rowCopyRepeatCount(){
+  return Math.max(1,Math.min(99,Number($("rowCopyRepeat")?.value)||1));
+}
+function buildRepeatedRowBlock(pattern,repeats){
+  const block=[];
+  for(let k=0;k<repeats;k++) pattern.forEach(row=>block.push(row.slice()));
+  return block;
+}
+function copySelectedRows(direction){
+  if(!project||!selectedRows.size) return;
+  const indices=[...selectedRows].filter(r=>r>=0&&r<project.rows).sort((a,b)=>a-b);
+  if(!indices.length) return;
+  const pattern=selectedRowPattern();
+  const block=buildRepeatedRowBlock(pattern,rowCopyRepeatCount());
+  pushHistory();
+  let start;
+  if(direction==="down"){
+    start=indices[indices.length-1]+1;
+    const need=start+block.length-project.rows;
+    for(let i=0;i<need;i++) project.grid.push(Array(project.cols).fill(null));
+    project.rows=project.grid.length;
+    block.forEach((row,i)=>{project.grid[start+i]=row.slice()});
+  }else{
+    const min=indices[0];
+    const missing=Math.max(0,block.length-min);
+    for(let i=0;i<missing;i++) project.grid.unshift(Array(project.cols).fill(null));
+    project.rows=project.grid.length;
+    start=min+missing-block.length;
+    block.forEach((row,i)=>{project.grid[start+i]=row.slice()});
+  }
+  selectedRows=new Set(Array.from({length:block.length},(_,i)=>start+i));
+  renderGrid();
+  saveCurrent();
+  toast(`Linhas copiadas para ${direction==="down"?"baixo":"cima"}`);
+}
+
 function rotate90(){
   if(!project) return;
   pushHistory();
@@ -773,7 +843,7 @@ async function generateProjectFromImage(){
   };
 
   selectedColor=project.palette[0].id;
-  tool="paint"; symmetry=false; undoStack=[]; redoStack=[]; zoomLevel=1;
+  tool="paint"; symmetry=false; undoStack=[]; redoStack=[]; selectedRows.clear(); updateRowSelectionBar(); zoomLevel=1;
   setProjectLabel(); renderPalette();
   $("editorPaletteBar")?.classList.remove("paletteCollapsed");
   $("paletteBtn")?.classList.add("activeTool");
@@ -833,7 +903,20 @@ function loadProjects(){
 }
 function saveProjects(list){localStorage.setItem(STORAGE_KEY,JSON.stringify(list))}
 function uid(){return "p_"+Date.now()+"_"+Math.random().toString(36).slice(2,7)}
-function snapshot(){return project.grid.map(r=>[...r])}
+function snapshot(){
+  return {rows:project.rows, cols:project.cols, grid:project.grid.map(r=>[...r])};
+}
+function restoreSnapshot(state){
+  if(Array.isArray(state)){
+    project.grid=state.map(r=>[...r]);
+    project.rows=project.grid.length;
+    project.cols=project.grid[0]?.length||project.cols;
+    return;
+  }
+  project.rows=state.rows;
+  project.cols=state.cols;
+  project.grid=state.grid.map(r=>[...r]);
+}
 function pushHistory(){
   undoStack.push(snapshot());
   if(undoStack.length>40) undoStack.shift();
@@ -843,7 +926,7 @@ function setProjectLabel(){
   $("projectLabel").textContent = project ? project.name : "Novo projeto";
 }
 function newProjectData(){
-  const rows = Math.max(4,Math.min(60,Number($("rowsInput").value)||18));
+  const rows = Math.max(4,Math.min(500,Number($("rowsInput").value)||18));
   const cols = Math.max(4,Math.min(40,Number($("colsInput").value)||12));
   return ensurePalette({
     id:uid(),
@@ -907,7 +990,7 @@ function renderGrid(){
   project.grid.forEach((row,r)=>{
     row.forEach((colorId,c)=>{
       const bead=document.createElement("button");
-      bead.className="bead"+(colorId?"":" empty");
+      bead.className="bead"+(colorId?"":" empty")+(selectedRows.has(r)?" selectedRowBead":"");
       bead.dataset.r=r; bead.dataset.c=c;
       const color=project.palette.find(x=>x.id===colorId);
       if(color) bead.style.background=color.hex;
@@ -962,7 +1045,7 @@ function updateBeadDom(r,c){
   if(!bead) return;
   const colorId=project.grid[r][c];
   const color=project.palette.find(x=>x.id===colorId);
-  bead.className="bead"+(colorId?"":" empty");
+  bead.className="bead"+(colorId?"":" empty")+(selectedRows.has(r)?" selectedRowBead":"");
   bead.style.background=color?color.hex:"";
 }
 
@@ -1109,7 +1192,7 @@ $("imageInput").onchange=(e)=>loadImageFromInput(e.target);
 $("generateFromImageBtn").onclick=generateProjectFromImage;
 $("cancelNewBtn").onclick=()=>showView("homeView");
 $("createProjectBtn").onclick=()=>{
-  project=newProjectData(); selectedColor=project.palette[0].id; undoStack=[]; redoStack=[];
+  project=newProjectData(); selectedColor=project.palette[0].id; undoStack=[]; redoStack=[]; selectedRows.clear(); updateRowSelectionBar();
   zoomLevel=1; setProjectLabel(); renderPalette();
   $("editorPaletteBar")?.classList.remove("paletteCollapsed");
   $("paletteBtn")?.classList.add("activeTool"); updateToolButtons(); renderGrid(); showView("editorView"); setupZoomGestures(); setupLockedRulers(); applyZoom(1); setLoomMode(project.technique==="Tear");
@@ -1133,11 +1216,11 @@ $("panToolBtn").onclick=()=>{tool="pan";updateToolButtons();toast("Mão ativada:
 $("symmetryBtn").onclick=()=>{symmetry=!symmetry;updateToolButtons();toast(symmetry?"Simetria ligada":"Simetria desligada")}
 $("undoBtn").onclick=()=>{
   if(!project||!undoStack.length)return;
-  redoStack.push(snapshot()); project.grid=undoStack.pop(); renderGrid();
+  redoStack.push(snapshot()); restoreSnapshot(undoStack.pop()); selectedRows.clear(); renderGrid();
 }
 $("redoBtn").onclick=()=>{
   if(!project||!redoStack.length)return;
-  undoStack.push(snapshot()); project.grid=redoStack.pop(); renderGrid();
+  undoStack.push(snapshot()); restoreSnapshot(redoStack.pop()); selectedRows.clear(); renderGrid();
 }
 $("clearBtn").onclick=()=>{
   if(!project||!confirm("Limpar todo o desenho?"))return;
@@ -1189,3 +1272,7 @@ applyTheme(loadTheme());
 updateLastProject();
 setProjectLabel();
 setupLaunchQueue();
+
+$("copyRowsUpBtn")?.addEventListener("click",()=>copySelectedRows("up"));
+$("copyRowsDownBtn")?.addEventListener("click",()=>copySelectedRows("down"));
+$("clearRowSelectionBtn")?.addEventListener("click",clearRowSelection);

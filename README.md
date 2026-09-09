@@ -1,3 +1,13 @@
+# V5.19 — Seleção e cópia de múltiplas linhas
+
+- Toque nos números da régua vertical para selecionar/desmarcar qualquer quantidade de linhas.
+- Barra de ações permite copiar o bloco selecionado para cima ou para baixo.
+- Campo Repetir permite repetir o padrão de linhas de 1 a 99 vezes.
+- A grade cresce automaticamente quando a cópia ultrapassa o fim/início disponível.
+- A seleção copiada passa a ser a seleção ativa, facilitando repetir a operação.
+- Desfazer/Refazer agora também restaura alterações no número de linhas.
+- Mantidas as travas das barras, paleta, tabela e réguas, além das melhorias de captura e fundo limpo.
+
 # JPmiçangas Designer PWA
 
 Primeira versão funcional do aplicativo para criação de diagramas de miçangas.
@@ -236,3 +246,10 @@ A associação direta do arquivo `.jpm` depende do suporte do navegador/sistema 
 - Tabela recortada no viewport para nunca sobrepor as barras.
 - Réguas horizontal e vertical travadas por compensação de scroll em JavaScript, evitando falhas do CSS sticky com zoom no Chrome/Android.
 - Mantidas todas as melhorias de captura profissional da V5.16.
+
+
+## V5.18 — Fundo da tabela limpo
+- Removidas as linhas grandes verticais/horizontais do fundo no modo Tear realista.
+- Mantido o efeito realista dentro das próprias miçangas.
+- Mantidos os bloqueios das barras, paleta, tabela e réguas da V5.17.
+- Mantidas as melhorias da captura profissional da V5.16.
