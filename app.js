@@ -229,18 +229,116 @@ async function shareJpm(){
 }
 function buildExportCanvas(){
   if(!project) return null;
-  const cell=34,ruler=38,pad=24,titleH=58,w=pad*2+ruler+project.cols*cell,h=pad*2+titleH+ruler+project.rows*cell;
-  const canvas=document.createElement("canvas"); canvas.width=Math.max(640,w); canvas.height=Math.max(480,h);
-  const ctx=canvas.getContext("2d"); ctx.fillStyle=loadTheme().gridBg||"#fffaff"; ctx.fillRect(0,0,canvas.width,canvas.height);
-  ctx.fillStyle="#4c1d75"; ctx.font="bold 22px system-ui"; ctx.fillText(project.name||"Projeto JPmiçangas",pad,34);
-  ctx.font="13px system-ui"; ctx.fillText(`${project.rows} linhas × ${project.cols} colunas • ${project.technique||""}`,pad,54);
-  const ox=pad+ruler,oy=pad+titleH+ruler; ctx.textAlign="center";ctx.textBaseline="middle";ctx.font="bold 11px system-ui";ctx.fillStyle="#5b3a78";
-  for(let c=0;c<project.cols;c++) ctx.fillText(columnLabel(c),ox+c*cell+cell/2,oy-ruler/2);
-  for(let r=0;r<project.rows;r++) ctx.fillText(String(r+1),ox-ruler/2,oy+r*cell+cell/2);
-  for(let r=0;r<project.rows;r++) for(let c=0;c<project.cols;c++){
-    const x=ox+c*cell+cell/2,y=oy+r*cell+cell/2,id=project.grid[r][c],color=project.palette.find(p=>p.id===id);
-    ctx.beginPath();ctx.arc(x,y,cell*.38,0,Math.PI*2);ctx.fillStyle=color?.hex||"#f4eee9";ctx.fill();
-    ctx.lineWidth=1;ctx.strokeStyle="rgba(0,0,0,.22)";ctx.stroke();
+
+  // Exporta somente a área realmente usada do desenho.
+  // Linhas/colunas totalmente vazias ao redor do modelo não entram no JPG/PDF.
+  let minRow=project.rows, maxRow=-1, minCol=project.cols, maxCol=-1;
+  for(let r=0;r<project.rows;r++){
+    for(let c=0;c<project.cols;c++){
+      if(project.grid[r][c]){
+        if(r<minRow) minRow=r;
+        if(r>maxRow) maxRow=r;
+        if(c<minCol) minCol=c;
+        if(c>maxCol) maxCol=c;
+      }
+    }
+  }
+
+  // Se o desenho estiver vazio, mantém a grade inteira para não gerar arquivo inválido.
+  if(maxRow<0 || maxCol<0){
+    minRow=0; minCol=0; maxRow=project.rows-1; maxCol=project.cols-1;
+  }
+
+  const exportRows=maxRow-minRow+1;
+  const exportCols=maxCol-minCol+1;
+  const theme=loadTheme();
+  const gridBg=theme.gridBg||"#fffaff";
+  const cell=34,ruler=38,pad=24,titleH=58;
+  const w=pad*2+ruler+exportCols*cell;
+  const h=pad*2+titleH+ruler+exportRows*cell;
+  const canvas=document.createElement("canvas");
+  canvas.width=Math.max(420,w);
+  canvas.height=Math.max(320,h);
+  const ctx=canvas.getContext("2d");
+
+  ctx.fillStyle=gridBg;
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  ctx.fillStyle="#4c1d75";
+  ctx.font="bold 22px system-ui";
+  ctx.textAlign="left";
+  ctx.textBaseline="alphabetic";
+  ctx.fillText(project.name||"Projeto JPmiçangas",pad,34);
+  ctx.font="13px system-ui";
+  ctx.fillText(`${exportRows} linhas × ${exportCols} colunas • ${project.technique||""}`,pad,54);
+
+  const ox=pad+ruler,oy=pad+titleH+ruler;
+  ctx.textAlign="center";
+  ctx.textBaseline="middle";
+  ctx.font="bold 11px system-ui";
+  ctx.fillStyle="#5b3a78";
+  for(let c=0;c<exportCols;c++) ctx.fillText(columnLabel(c),ox+c*cell+cell/2,oy-ruler/2);
+  for(let r=0;r<exportRows;r++) ctx.fillText(String(r+1),ox-ruler/2,oy+r*cell+cell/2);
+
+  function hexToRgb(hex){
+    const clean=String(hex||"").replace("#","").trim();
+    if(clean.length===3){
+      return {r:parseInt(clean[0]+clean[0],16),g:parseInt(clean[1]+clean[1],16),b:parseInt(clean[2]+clean[2],16)};
+    }
+    if(clean.length===6){
+      return {r:parseInt(clean.slice(0,2),16),g:parseInt(clean.slice(2,4),16),b:parseInt(clean.slice(4,6),16)};
+    }
+    return {r:255,g:250,b:255};
+  }
+  function mix(rgb,target,amount){
+    return `rgb(${Math.round(rgb.r+(target-rgb.r)*amount)},${Math.round(rgb.g+(target-rgb.g)*amount)},${Math.round(rgb.b+(target-rgb.b)*amount)})`;
+  }
+  function drawBead(x,y,hex,isEmpty){
+    const radius=cell*.41;
+    const rgb=hexToRgb(hex);
+    ctx.save();
+    ctx.shadowColor="rgba(0,0,0,.24)";
+    ctx.shadowBlur=2;
+    ctx.shadowOffsetY=1;
+    ctx.beginPath();
+    ctx.arc(x,y,radius,0,Math.PI*2);
+    ctx.fillStyle=hex;
+    ctx.fill();
+    ctx.restore();
+
+    const grad=ctx.createRadialGradient(x-radius*.34,y-radius*.38,radius*.08,x,y,radius);
+    grad.addColorStop(0,mix(rgb,255,.42));
+    grad.addColorStop(.34,hex);
+    grad.addColorStop(.82,mix(rgb,0,.12));
+    grad.addColorStop(1,mix(rgb,0,.34));
+    ctx.beginPath();
+    ctx.arc(x,y,radius,0,Math.PI*2);
+    ctx.fillStyle=grad;
+    ctx.fill();
+
+    ctx.lineWidth=1;
+    ctx.strokeStyle=isEmpty?"rgba(255,255,255,.22)":"rgba(0,0,0,.20)";
+    ctx.stroke();
+
+    const shine=ctx.createRadialGradient(x-radius*.35,y-radius*.42,0,x-radius*.35,y-radius*.42,radius*.52);
+    shine.addColorStop(0,"rgba(255,255,255,.42)");
+    shine.addColorStop(1,"rgba(255,255,255,0)");
+    ctx.beginPath();
+    ctx.arc(x,y,radius*.92,0,Math.PI*2);
+    ctx.fillStyle=shine;
+    ctx.fill();
+  }
+
+  for(let er=0;er<exportRows;er++){
+    const r=minRow+er;
+    for(let ec=0;ec<exportCols;ec++){
+      const c=minCol+ec;
+      const x=ox+ec*cell+cell/2;
+      const y=oy+er*cell+cell/2;
+      const id=project.grid[r][c];
+      const color=project.palette.find(p=>p.id===id);
+      drawBead(x,y,color?.hex||gridBg,!color);
+    }
   }
   return canvas;
 }

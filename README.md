@@ -155,3 +155,16 @@ A associação direta do arquivo `.jpm` depende do suporte do navegador/sistema 
 - Corrigido editor aparecendo por baixo das telas Home/Novo projeto.
 - Editor agora só é exibido quando a view editorView está ativa.
 - Mantidas correções V5.5 de barras fixas, réguas sticky e fundo da grade.
+
+
+## V5.7 — Exportação fiel à grade
+- JPG/PDF agora respeitam a cor de fundo da grade nas células vazias.
+- Miçangas exportadas recebem volume/sombreamento semelhante ao editor.
+- Corrigido o erro que transformava células vazias em branco/bege ao salvar imagem.
+
+
+## V5.8 — Exportação recortada ao modelo
+- JPG e PDF exportam somente a área realmente usada do desenho.
+- Linhas e colunas totalmente vazias ao redor do modelo são removidas automaticamente.
+- A numeração do arquivo exportado reinicia em 1 e A dentro da área recortada.
+- Mantém o fundo e o efeito visual das miçangas da V5.7.
