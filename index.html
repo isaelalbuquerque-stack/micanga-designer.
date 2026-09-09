@@ -172,9 +172,15 @@
           <h2>Imagem → Diagrama</h2>
           <p class="helperText">Envie uma foto de um brinco. O processamento acontece no próprio aparelho.</p>
 
-          <label>Foto do brinco
-            <input id="imageInput" type="file" accept="image/*" />
-          </label>
+          <div class="imageSourceBox">
+            <span class="imageSourceLabel">Foto do brinco</span>
+            <div class="imageSourceBtns">
+              <button id="cameraImageBtn" type="button" class="primary">📷 Câmera</button>
+              <button id="galleryImageBtn" type="button" class="secondary">🖼️ Galeria</button>
+            </div>
+            <input id="cameraImageInput" type="file" accept="image/*" capture="environment" class="hidden" />
+            <input id="imageInput" type="file" accept="image/*" class="hidden" />
+          </div>
 
           <div id="imagePreviewWrap" class="imagePreviewWrap hidden">
             <img id="imagePreview" alt="Prévia da imagem selecionada" />
@@ -183,6 +189,7 @@
           <div class="grid2">
             <label>Largura do diagrama
               <select id="imageColsInput">
+                <option value="10">10 colunas</option>
                 <option value="12">12 colunas</option>
                 <option value="16">16 colunas</option>
                 <option value="20" selected>20 colunas</option>
@@ -197,10 +204,11 @@
               <select id="imageColorsInput">
                 <option value="4">4 cores</option>
                 <option value="6">6 cores</option>
-                <option value="8" selected>8 cores</option>
-                <option value="12">12 cores</option>
+                <option value="8">8 cores</option>
+                <option value="12" selected>12 cores</option>
                 <option value="16">16 cores</option>
                 <option value="24">24 cores</option>
+                <option value="32">32 cores</option>
               </select>
             </label>
           </div>
@@ -210,6 +218,14 @@
               <option value="none">Não remover</option>
               <option value="light" selected>Ignorar fundo claro</option>
               <option value="dark">Ignorar fundo escuro</option>
+            </select>
+          </label>
+
+          <label>Detecção das miçangas
+            <select id="imageSensitivityInput">
+              <option value="0.06">Alta — preenche mais células</option>
+              <option value="0.10" selected>Equilibrada</option>
+              <option value="0.18">Limpa — remove mais fundo</option>
             </select>
           </label>
 

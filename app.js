@@ -407,27 +407,89 @@ function rgbToHex(r,g,b){
 }
 
 function isBackgroundPixel(r,g,b,mode){
-  if(mode==="light") return r>235 && g>235 && b>235;
-  if(mode==="dark") return r<25 && g<25 && b<25;
+  // Limites mais conservadores: evita apagar miçangas claras/escuras reais.
+  if(mode==="light") return r>248 && g>248 && b>248;
+  if(mode==="dark") return r<10 && g<10 && b<10;
   return false;
 }
 
-function buildQuantizedPalette(pixels, maxColors, bgMode){
-  const buckets = new Map();
-  for(let i=0;i<pixels.length;i+=4){
-    const r=pixels[i], g=pixels[i+1], b=pixels[i+2], a=pixels[i+3];
-    if(a<100 || isBackgroundPixel(r,g,b,bgMode)) continue;
-    const qr=Math.round(r/32)*32, qg=Math.round(g/32)*32, qb=Math.round(b/32)*32;
-    const key=`${qr},${qg},${qb}`;
-    buckets.set(key,(buckets.get(key)||0)+1);
+function cellColorFromRegion(ctx, x0, y0, x1, y1, bgMode){
+  const w=Math.max(1,x1-x0), h=Math.max(1,y1-y0);
+  const data=ctx.getImageData(x0,y0,w,h).data;
+  const pts=[];
+  let valid=0,total=0;
+  // Amostragem distribuída dentro da célula, evitando que reflexos isolados dominem a cor.
+  const step=Math.max(1,Math.floor(Math.sqrt((w*h)/180)));
+  for(let y=0;y<h;y+=step){
+    for(let x=0;x<w;x+=step){
+      const i=(y*w+x)*4;
+      const r=data[i],g=data[i+1],b=data[i+2],a=data[i+3];
+      total++;
+      if(a<90 || isBackgroundPixel(r,g,b,bgMode)) continue;
+      valid++;
+      pts.push([r,g,b]);
+    }
   }
-  return [...buckets.entries()]
-    .sort((a,b)=>b[1]-a[1])
-    .slice(0,maxColors)
-    .map(([key],idx)=>{
-      const [r,g,b]=key.split(",").map(Number);
-      return {id:`img_${Date.now()}_${idx}`,name:`Cor imagem ${idx+1}`,code:`IMG${String(idx+1).padStart(2,"0")}`,hex:rgbToHex(r,g,b),rgb:[r,g,b]};
-    });
+  if(!pts.length) return {coverage:0,rgb:null};
+
+  // Mediana por canal: mantém a cor da miçanga e reduz influência de brilho/sombra da foto.
+  const rs=pts.map(v=>v[0]).sort((a,b)=>a-b);
+  const gs=pts.map(v=>v[1]).sort((a,b)=>a-b);
+  const bs=pts.map(v=>v[2]).sort((a,b)=>a-b);
+  const mid=Math.floor(pts.length/2);
+  return {coverage:valid/Math.max(1,total),rgb:[rs[mid],gs[mid],bs[mid]]};
+}
+
+function kmeansPalette(samples,maxColors){
+  if(!samples.length) return [];
+  const uniq=[];
+  const seen=new Set();
+  for(const s of samples){
+    const key=s.rgb.map(v=>Math.round(v/6)*6).join(',');
+    if(!seen.has(key)){seen.add(key);uniq.push(s.rgb);}
+  }
+  const k=Math.max(1,Math.min(maxColors,uniq.length));
+
+  // Inicialização por pontos mais distantes para preservar cores minoritárias.
+  const centers=[uniq[0].slice()];
+  while(centers.length<k){
+    let best=null,bestD=-1;
+    for(const rgb of uniq){
+      let dmin=Infinity;
+      for(const c of centers) dmin=Math.min(dmin,colorDistance(rgb,c));
+      if(dmin>bestD){bestD=dmin;best=rgb;}
+    }
+    centers.push(best.slice());
+  }
+
+  for(let iter=0;iter<10;iter++){
+    const sums=Array.from({length:k},()=>[0,0,0,0]);
+    for(const s of samples){
+      let bi=0,bd=Infinity;
+      for(let i=0;i<k;i++){
+        const d=colorDistance(s.rgb,centers[i]);
+        if(d<bd){bd=d;bi=i;}
+      }
+      const weight=Math.max(.25,s.coverage||1);
+      sums[bi][0]+=s.rgb[0]*weight;
+      sums[bi][1]+=s.rgb[1]*weight;
+      sums[bi][2]+=s.rgb[2]*weight;
+      sums[bi][3]+=weight;
+    }
+    for(let i=0;i<k;i++) if(sums[i][3]) centers[i]=[
+      Math.round(sums[i][0]/sums[i][3]),
+      Math.round(sums[i][1]/sums[i][3]),
+      Math.round(sums[i][2]/sums[i][3])
+    ];
+  }
+
+  return centers.map((rgb,idx)=>({
+    id:`img_${Date.now()}_${idx}`,
+    name:`Cor imagem ${idx+1}`,
+    code:`IMG${String(idx+1).padStart(2,"0")}`,
+    hex:rgbToHex(...rgb),
+    rgb
+  }));
 }
 
 function nearestPaletteId(r,g,b,palette){
@@ -451,7 +513,7 @@ function cropTransparentBounds(ctx,w,h,bgMode){
     for(let x=0;x<w;x++){
       const i=(y*w+x)*4;
       const r=data[i],g=data[i+1],b=data[i+2],a=data[i+3];
-      if(a>100 && !isBackgroundPixel(r,g,b,bgMode)){
+      if(a>90 && !isBackgroundPixel(r,g,b,bgMode)){
         if(x<minX)minX=x;if(x>maxX)maxX=x;if(y<minY)minY=y;if(y>maxY)maxY=y;
       }
     }
@@ -467,45 +529,56 @@ async function generateProjectFromImage(){
   }
 
   const cols = Number($("imageColsInput").value)||20;
-  const maxColors = Number($("imageColorsInput").value)||8;
+  const maxColors = Number($("imageColorsInput").value)||12;
   const bgMode = $("backgroundModeInput").value;
+  const sensitivity = Number($("imageSensitivityInput")?.value)||0.10;
   const name = $("imageProjectName").value.trim() || "Brinco convertido";
 
   const canvas=$("imageProcessCanvas");
   const ctx=canvas.getContext("2d",{willReadFrequently:true});
 
-  const maxSide=800;
+  const maxSide=1000;
   const scale=Math.min(1,maxSide/Math.max(uploadedImage.naturalWidth,uploadedImage.naturalHeight));
   canvas.width=Math.max(1,Math.round(uploadedImage.naturalWidth*scale));
   canvas.height=Math.max(1,Math.round(uploadedImage.naturalHeight*scale));
+  ctx.imageSmoothingEnabled=true;
+  ctx.imageSmoothingQuality="high";
   ctx.drawImage(uploadedImage,0,0,canvas.width,canvas.height);
 
   const crop=cropTransparentBounds(ctx,canvas.width,canvas.height,bgMode);
   const aspect=crop.h/crop.w;
-  const rows=Math.max(4,Math.min(80,Math.round(cols*aspect)));
+  const rows=Math.max(2,Math.min(100,Math.round(cols*aspect)));
 
-  const sample=document.createElement("canvas");
-  sample.width=cols;
-  sample.height=rows;
-  const sctx=sample.getContext("2d",{willReadFrequently:true});
-  sctx.imageSmoothingEnabled=true;
-  sctx.drawImage(canvas,crop.x,crop.y,crop.w,crop.h,0,0,cols,rows);
+  // Analisa cada célula diretamente na imagem original, sem reduzir tudo a 1 pixel.
+  const cells=[];
+  const useful=[];
+  for(let y=0;y<rows;y++){
+    const row=[];
+    for(let x=0;x<cols;x++){
+      const x0=Math.floor(crop.x+(x/cols)*crop.w);
+      const x1=Math.max(x0+1,Math.floor(crop.x+((x+1)/cols)*crop.w));
+      const y0=Math.floor(crop.y+(y/rows)*crop.h);
+      const y1=Math.max(y0+1,Math.floor(crop.y+((y+1)/rows)*crop.h));
+      const info=cellColorFromRegion(ctx,x0,y0,x1,y1,bgMode);
+      row.push(info);
+      if(info.rgb && info.coverage>=sensitivity) useful.push(info);
+    }
+    cells.push(row);
+  }
 
-  const imgData=sctx.getImageData(0,0,cols,rows);
-  const imgPalette=buildQuantizedPalette(imgData.data,maxColors,bgMode);
-
+  const imgPalette=kmeansPalette(useful,maxColors);
   if(!imgPalette.length){
-    toast("Não consegui identificar cores úteis");
+    toast("Não consegui identificar cores úteis. Tente 'Não remover fundo' ou maior sensibilidade.");
     return;
   }
 
   const grid=Array.from({length:rows},()=>Array(cols).fill(null));
   for(let y=0;y<rows;y++){
     for(let x=0;x<cols;x++){
-      const i=(y*cols+x)*4;
-      const r=imgData.data[i],g=imgData.data[i+1],b=imgData.data[i+2],a=imgData.data[i+3];
-      if(a<100 || isBackgroundPixel(r,g,b,bgMode)) continue;
-      grid[y][x]=nearestPaletteId(r,g,b,imgPalette);
+      const info=cells[y][x];
+      // Só fica vazia quando realmente há pouco conteúdo naquela célula.
+      if(!info.rgb || info.coverage<sensitivity) continue;
+      grid[y][x]=nearestPaletteId(...info.rgb,imgPalette);
     }
   }
 
@@ -538,7 +611,7 @@ async function generateProjectFromImage(){
   if(typeof setupZoomGestures==="function") setupZoomGestures();
   if(typeof applyZoom==="function") applyZoom(1);
   if(typeof setLoomMode==="function") setLoomMode(false);
-  toast("Diagrama criado a partir da imagem");
+  toast(`Diagrama criado: ${project.palette.length} cores detectadas`);
 }
 
 
@@ -830,8 +903,8 @@ $("bgQuickBtn").onclick=()=>{
 $("newProjectBtn").onclick=()=>showView("newProjectView");
 $("imageProjectBtn").onclick=()=>showView("imageProjectView");
 $("cancelImageBtn").onclick=()=>showView("homeView");
-$("imageInput").onchange=(e)=>{
-  const file=e.target.files?.[0];
+function loadImageFromInput(input){
+  const file=input.files?.[0];
   if(!file) return;
   const url=URL.createObjectURL(file);
   const img=new Image();
@@ -839,9 +912,27 @@ $("imageInput").onchange=(e)=>{
     uploadedImage=img;
     $("imagePreview").src=url;
     $("imagePreviewWrap").classList.remove("hidden");
+    toast("Imagem carregada");
+  };
+  img.onerror=()=>{
+    URL.revokeObjectURL(url);
+    toast("Não foi possível abrir esta imagem");
   };
   img.src=url;
+}
+
+$("cameraImageBtn").onclick=()=>{
+  const input=$("cameraImageInput");
+  input.value="";
+  input.click();
 };
+$("galleryImageBtn").onclick=()=>{
+  const input=$("imageInput");
+  input.value="";
+  input.click();
+};
+$("cameraImageInput").onchange=(e)=>loadImageFromInput(e.target);
+$("imageInput").onchange=(e)=>loadImageFromInput(e.target);
 $("generateFromImageBtn").onclick=generateProjectFromImage;
 $("cancelNewBtn").onclick=()=>showView("homeView");
 $("createProjectBtn").onclick=()=>{

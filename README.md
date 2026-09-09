@@ -185,3 +185,17 @@ A associação direta do arquivo `.jpm` depende do suporte do navegador/sistema 
 - Lista de miçangas foi compactada e fica imediatamente abaixo da tabela de edição.
 - A lista possui rolagem interna quando houver muitos itens.
 - A ferramenta Mão da V5.9 foi mantida.
+
+## V5.11 — Captura de imagem aprimorada
+- A imagem agora é analisada célula por célula, sem reduzir cada célula a um único pixel suavizado.
+- Melhor preservação das cores originais e de tonalidades próximas.
+- Células só ficam vazias quando realmente possuem pouco conteúdo detectável.
+- Novo controle de detecção: Alta, Equilibrada e Limpa.
+- Fundo claro/escuro usa limites mais conservadores para não apagar miçangas claras ou escuras.
+- Paleta automática passou a usar agrupamento de cores por células e suporta até 32 cores.
+- Adicionada opção de 10 colunas para diagramas pequenos.
+
+
+## V5.12 — Câmera e galeria
+- Na tela Imagem → Diagrama, o usuário pode escolher entre abrir a câmera traseira ou selecionar uma imagem local da galeria/arquivos.
+- Mantido o processamento aprimorado da V5.11.

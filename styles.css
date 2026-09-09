@@ -727,3 +727,13 @@ button{transition:transform .12s ease,box-shadow .18s ease,filter .18s ease}
   .editorView #gridViewport{min-height:300px;max-height:70vh !important}
   .materialsCard .materialsList{max-height:96px}
 }
+
+
+/* V5.12 — seleção da imagem por câmera ou galeria */
+.imageSourceBox{margin:14px 0;display:grid;gap:8px}
+.imageSourceLabel{color:var(--muted);font-weight:600}
+.imageSourceBtns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.imageSourceBtns button{min-height:42px;padding:9px 10px}
+@media(max-width:420px){
+  .imageSourceBtns button{font-size:.86rem;padding:8px 6px}
+}
