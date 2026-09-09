@@ -139,3 +139,13 @@ A associação direta do arquivo `.jpm` depende do suporte do navegador/sistema 
 - Régua horizontal permanece visível durante a rolagem vertical.
 - Régua vertical permanece visível durante a rolagem horizontal.
 - Canto das duas réguas permanece fixo para facilitar a localização de linha e coluna.
+
+
+## Atualização V5.5
+- Barra de ferramentas fixa durante a rolagem da tela.
+- Barra de cores fixa logo abaixo da barra de ferramentas.
+- Régua de colunas fixa no topo da grade.
+- Régua de linhas fixa à esquerda da grade.
+- Zoom alterado para preservar o comportamento sticky no Chrome/Android.
+- Cor de fundo da grade agora altera também a área vazia e as células sem cor.
+- Cache do PWA atualizado para forçar o carregamento da nova versão.

@@ -34,8 +34,8 @@ input,select{width:100%;border:1px solid var(--border);background:#fff;padding:1
 .toolbar{display:grid;grid-template-columns:repeat(20,minmax(44px,1fr));gap:7px;padding:8px;position:sticky;top:77px;z-index:15;overflow-x:auto;scrollbar-width:auto}
 .toolbar button{padding:10px 4px;background:var(--lilac-soft2);color:var(--text)}.toolbar .activeTool{outline:2px solid var(--primary);background:var(--lilac-soft);color:var(--primary-dark)}.toolbar .saveTool{background:linear-gradient(135deg,var(--primary),var(--primary2));color:#fff}
 .canvasCard{padding:8px;overflow:hidden}
-#gridViewport{background-color:var(--grid-bg);overflow:auto;max-height:64vh;min-height:300px;touch-action:none;overscroll-behavior:contain;scrollbar-gutter:stable both-edges;position:relative;background:linear-gradient(45deg,#f4eaff 25%,transparent 25%),linear-gradient(-45deg,#f4eaff 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#f4eaff 75%),linear-gradient(-45deg,transparent 75%,#f4eaff 75%);background-size:18px 18px;background-position:0 0,0 9px,9px -9px,-9px 0}
-#gridStage{display:grid;grid-template-columns:34px max-content;grid-template-rows:34px max-content;width:max-content;min-width:100%;transform-origin:top left;will-change:transform;position:relative;z-index:2;padding:10px}
+#gridViewport{background:var(--grid-bg);overflow:auto;max-height:64vh;min-height:300px;touch-action:none;overscroll-behavior:contain;scrollbar-gutter:stable both-edges;position:relative}
+#gridStage{display:grid;grid-template-columns:34px max-content;grid-template-rows:34px max-content;width:max-content;min-width:100%;position:relative;z-index:2;padding:10px;background:var(--grid-bg)}
 .rulerCorner{grid-column:1;grid-row:1;position:sticky;left:0;top:0;z-index:6;background:#ede2fb;border:1px solid var(--border);border-radius:8px 0 0 0}
 .columnRuler{grid-column:2;grid-row:1;display:grid;gap:3px;align-items:stretch;position:relative;z-index:5}
 .rowRuler{grid-column:1;grid-row:2;display:grid;gap:3px;position:relative;z-index:5}
@@ -44,7 +44,7 @@ input,select{width:100%;border:1px solid var(--border);background:#fff;padding:1
 .rowRuler .rulerCell{width:34px}
 #beadGrid{grid-column:2;grid-row:2;display:grid;gap:3px;width:max-content;transform-origin:top left;position:relative;z-index:2}
 .bead{width:28px;height:28px;border-radius:50%;border:1px solid rgba(0,0,0,.13);background:#f7f2ef;box-shadow:inset 0 2px 4px rgba(255,255,255,.8),0 1px 2px rgba(0,0,0,.08);touch-action:none}
-.bead.empty{background:#f4eee9;border-style:dashed;opacity:.65}
+.bead.empty{background:var(--grid-bg);border-style:dashed;opacity:.82}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);text-align:center;padding:12px 6px}.stats div{display:grid;gap:2px}.stats strong{font-size:1rem}.stats span{font-size:.72rem;color:var(--muted)}
 .paletteHead,.projectsHead{display:flex;justify-content:space-between;align-items:center;gap:10px}.paletteHead h3,.projectsHead h2{margin:0}.small{padding:8px 10px;background:var(--lilac-soft);color:var(--primary-dark)}
 .paletteColors{display:flex;gap:9px;overflow-x:auto;padding:12px 2px 2px}
@@ -461,4 +461,66 @@ button{transition:transform .12s ease,box-shadow .18s ease,filter .18s ease}
   .toolbar{grid-template-columns:repeat(13,40px)}
   .canvasTop{min-height:36px}
   .tableZoom button{height:29px;min-width:29px}
+}
+
+
+/* =========================================================
+   V5.5 — barras fixas, réguas realmente sticky e fundo da grade
+   ========================================================= */
+
+/* A barra de ferramentas e a paleta ficam visíveis ao rolar a página. */
+.editorView .toolbar{
+  position:sticky;
+  top:69px;
+  z-index:40;
+}
+.editorPaletteBar{
+  position:sticky;
+  top:123px;
+  z-index:39;
+  background:var(--card);
+}
+
+/* Apenas a grade rola dentro do visor. */
+#gridViewport{
+  isolation:isolate;
+  background:var(--grid-bg) !important;
+}
+#gridStage{
+  transform:none !important;
+  background:var(--grid-bg);
+}
+#beadGrid{
+  background:var(--grid-bg);
+}
+
+/* Réguas permanecem no topo/esquerda durante o scroll do gridViewport. */
+.rulerCorner{
+  position:sticky !important;
+  top:0 !important;
+  left:0 !important;
+  z-index:33 !important;
+  background:var(--grid-bg) !important;
+}
+.columnRuler{
+  position:sticky !important;
+  top:0 !important;
+  z-index:32 !important;
+  background:var(--grid-bg) !important;
+}
+.rowRuler{
+  position:sticky !important;
+  left:0 !important;
+  z-index:31 !important;
+  background:var(--grid-bg) !important;
+}
+
+/* Célula vazia deixa o fundo escolhido aparecer. */
+.bead.empty{
+  background:var(--grid-bg) !important;
+}
+
+@media(min-width:521px){
+  .editorView .toolbar{top:77px}
+  .editorPaletteBar{top:137px}
 }

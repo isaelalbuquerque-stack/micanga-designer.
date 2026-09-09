@@ -93,10 +93,12 @@ function applyZoom(nextZoom, focusX=null, focusY=null){
   const contentX=(viewport.scrollLeft+focusX)/old;
   const contentY=(viewport.scrollTop+focusY)/old;
   zoomLevel=next;
-  stage.style.transform=`scale(${zoomLevel})`;
-  const w=stage.scrollWidth, h=stage.scrollHeight;
-  stage.style.marginRight=`${Math.max(0,(zoomLevel-1)*w)}px`;
-  stage.style.marginBottom=`${Math.max(0,(zoomLevel-1)*h)}px`;
+  // CSS zoom altera o tamanho de layout sem criar um ancestral transformado.
+  // Isso permite que position:sticky das réguas funcione no Chrome/Android.
+  stage.style.transform="none";
+  stage.style.marginRight="0px";
+  stage.style.marginBottom="0px";
+  stage.style.zoom=String(zoomLevel);
   viewport.scrollLeft=Math.max(0,contentX*zoomLevel-focusX);
   viewport.scrollTop=Math.max(0,contentY*zoomLevel-focusY);
   const pct=Math.round(zoomLevel*100);
