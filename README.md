@@ -131,3 +131,11 @@ A associação direta do arquivo `.jpm` depende do suporte do navegador/sistema 
 - A paleta de cores continua imediatamente abaixo da primeira barra.
 - A barra de arquivo acima da tabela agora contém: Salvar, JPM, JPG, PDF e Compartilhar.
 - Mantida a troca de cor por célula da V5.2.
+
+
+## V5.4 — zoom na tabela e réguas fixas
+- Controles de zoom removidos da primeira barra de ferramentas.
+- Zoom − / porcentagem / + colocado no canto superior direito da área da tabela.
+- Régua horizontal permanece visível durante a rolagem vertical.
+- Régua vertical permanece visível durante a rolagem horizontal.
+- Canto das duas réguas permanece fixo para facilitar a localização de linha e coluna.

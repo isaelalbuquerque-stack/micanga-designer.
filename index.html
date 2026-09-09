@@ -111,9 +111,6 @@
           <button id="symmetryBtn" title="Simetria ao pintar">↔</button>
           <button id="mirrorHBtn" title="Espelhar desenho horizontalmente">⇆</button>
           <button id="mirrorVBtn" title="Espelhar desenho verticalmente">⇅</button>
-          <button id="zoomOutBtn" title="Diminuir zoom">−</button>
-          <button id="zoomResetBtn" title="Zoom atual">100%</button>
-          <button id="zoomInBtn" title="Aumentar zoom">＋</button>
           <button id="loomBtn" title="Visualização de tear">🧵</button>
           <button id="rotateBtn" title="Girar 90°">⟳</button>
           <button id="bgQuickBtn" title="Mudar fundo">🎨</button>
@@ -131,7 +128,11 @@
         <div class="canvasCard card">
           <div class="canvasTop">
             <span id="viewModeLabel">Modo: Grade</span>
-            <span id="zoomLabel">Zoom 100%</span>
+            <div class="tableZoom" aria-label="Controle de zoom">
+              <button id="zoomOutBtn" type="button" title="Diminuir zoom">−</button>
+              <button id="zoomResetBtn" type="button" title="Restaurar 100%">100%</button>
+              <button id="zoomInBtn" type="button" title="Aumentar zoom">＋</button>
+            </div>
           </div>
           <div class="fileActions" aria-label="Arquivo e exportação">
             <button id="saveBtn" class="saveTool">💾 Salvar</button>

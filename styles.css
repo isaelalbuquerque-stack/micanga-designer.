@@ -389,3 +389,76 @@ button{transition:transform .12s ease,box-shadow .18s ease,filter .18s ease}
     font-size:.7rem;
   }
 }
+
+
+/* V5.4 — zoom no canto da tabela e réguas fixas */
+.toolbar{
+  grid-template-columns:repeat(13,minmax(42px,1fr));
+}
+.canvasTop{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  min-height:38px;
+  padding:1px 3px 5px;
+}
+.tableZoom{
+  margin-left:auto;
+  display:flex;
+  align-items:center;
+  gap:4px;
+  background:var(--lilac-soft2);
+  border:1px solid var(--border);
+  border-radius:11px;
+  padding:3px;
+}
+.tableZoom button{
+  height:30px;
+  min-width:30px;
+  padding:0 7px;
+  display:grid;
+  place-items:center;
+  border-radius:8px;
+  background:#fff;
+  color:var(--primary-dark);
+  font-weight:850;
+}
+.tableZoom #zoomResetBtn{
+  min-width:52px;
+  font-size:.7rem;
+}
+
+/* As réguas acompanham a tabela, mas permanecem visíveis ao rolar */
+.rulerCorner{
+  position:sticky !important;
+  left:0;
+  top:0;
+  z-index:12;
+}
+.columnRuler{
+  position:sticky !important;
+  top:0;
+  z-index:10;
+  background:var(--grid-bg);
+}
+.rowRuler{
+  position:sticky !important;
+  left:0;
+  z-index:10;
+  background:var(--grid-bg);
+}
+.columnRuler .rulerCell,
+.rowRuler .rulerCell,
+.rulerCorner{
+  position:relative;
+}
+
+/* Sombra discreta para separar réguas do desenho durante movimento */
+.columnRuler{box-shadow:0 2px 3px rgba(60,35,80,.10)}
+.rowRuler{box-shadow:2px 0 3px rgba(60,35,80,.10)}
+
+@media(max-width:520px){
+  .toolbar{grid-template-columns:repeat(13,40px)}
+  .canvasTop{min-height:36px}
+  .tableZoom button{height:29px;min-width:29px}
+}

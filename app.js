@@ -101,7 +101,7 @@ function applyZoom(nextZoom, focusX=null, focusY=null){
   viewport.scrollTop=Math.max(0,contentY*zoomLevel-focusY);
   const pct=Math.round(zoomLevel*100);
   $("zoomResetBtn").textContent=`${pct}%`;
-  $("zoomLabel").textContent=`Zoom ${pct}%`;
+  if($("zoomLabel")) $("zoomLabel").textContent=`Zoom ${pct}%`;
 }
 
 function touchDistance(a,b){ return Math.hypot(b.clientX-a.clientX,b.clientY-a.clientY); }
