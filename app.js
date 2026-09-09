@@ -106,13 +106,47 @@ const READY_TEMPLATES = [
   {id:"brace_geo",name:"Pulseira chevron",category:"Pulseiras",type:"Pulseira",technique:"Tear",rows:8,cols:16,pattern:[
     "RR..RR..RR..RR..",".RR..RR..RR..RR.","..RR..RR..RR..RR","...RR..RR..RR..R","...BB..BB..BB..B","..BB..BB..BB..BB",".BB..BB..BB..BB.","BB..BB..BB..BB.."],map:{R:"c3",B:"c37"}},
   {id:"neck_geo",name:"Cordão geométrico central",category:"Cordões",type:"Cordão",technique:"Tear",rows:9,cols:18,pattern:[
-    "........YY........",".......YGGY.......","......YGGGGY......",".....YGGKKGGY.....","....YGGKKKKGGY....",".....YGGKKGGY.....","......YGGGGY......",".......YGGY.......","........YY........"],map:{Y:"c7",G:"c41",K:"c1"}}
+    "........YY........",".......YGGY.......","......YGGGGY......",".....YGGKKGGY.....","....YGGKKKKGGY....",".....YGGKKGGY.....","......YGGGGY......",".......YGGY.......","........YY........"],map:{Y:"c7",G:"c41",K:"c1"}},
+  {id:"team_fla_detail",name:"Flamengo — escudo detalhado",category:"Futebol",type:"Brinco",technique:"Brick Stitch",rows:20,cols:20,pattern:[
+    "....RRRRRRRRRRRR....","...RRRRRRRRRRRRRR...","..RRKKKKKKKKKKKKRR..","..RRKKKKKKKKKKKKRR..","..RRRRRRRRRRRRRRRR..","..RRRRRRRRRRRRRRRR..","..RRKKKKKKKKKKKKRR..","..RRKKKKKKKKKKKKRR..","..RRRRRRRRRRRRRRRR..","..RRRRRWWWWWWRRRRR..","..RRKKKWKWWKWRKKRR..","..RRKKKWWKKWWKKKRR..","...RRRRRRRRRRRRRR...","...RRKKKKKKKKKKRR...","....RRRRRRRRRRRR....",".....RRKKKKKKRR.....","......RRRRRRRR......",".......RRRRRR.......","........RRRR........",".........RR........."],map:{R:"c3",K:"c1",W:"c2"}},
+  {id:"team_vasco_detail",name:"Vasco — escudo detalhado",category:"Futebol",type:"Brinco",technique:"Brick Stitch",rows:20,cols:20,pattern:[
+    "....KKKKKKKKKKKK....","...KKKKKKKKKKKKKK...","..KKKKKKKKKKKKKKKK..","..KKKKKKKKKKKKKWWK..","..KKKKKKKKKKKKWWWK..","..KKKKKKKKKKKWWKKK..","..KKKKKKKKKKWWKKKK..","..KKKKRRRKKWWKKKKK..","..KKKKRRRWWKKKKKKK..","..KKKRRRWWRRKKKKKK..","..KKKRRWWRRRKKKKKK..","..KKKKWWKRRRKKKKKK..","...KWWKKKKKKKKKKK...","...WWKKKKKKKKKKKK...","....KKKKKKKKKKKK....",".....KKKKKKKKKK.....","......KKKKKKKK......",".......KKKKKK.......","........KKKK........",".........KK........."],map:{K:"c1",W:"c2",R:"c3"}}
 ];
 
-function templateToProject(t){
-  const grid=t.pattern.map(row=>Array.from(row).map(ch=>ch==='.'?null:(t.map[ch]||null)));
+function templateMatrix(t){
+  return t.pattern.map(row=>Array.from(row).map(ch=>ch==='.'?null:(t.map[ch]||null)));
+}
+function resizeTemplateGrid(source,newRows,newCols){
+  const sr=source.length, sc=source[0]?.length||1;
+  return Array.from({length:newRows},(_,r)=>Array.from({length:newCols},(_,c)=>{
+    const rr=Math.min(sr-1,Math.floor((r+.5)*sr/newRows));
+    const cc=Math.min(sc-1,Math.floor((c+.5)*sc/newCols));
+    return source[rr][cc];
+  }));
+}
+function reduceTemplateColors(grid,maxColors){
+  const ids=[...new Set(grid.flat().filter(Boolean))];
+  if(ids.length<=maxColors) return grid;
+  const colors=ids.map(id=>defaultPalette.find(c=>c.id===id)).filter(Boolean);
+  const keep=colors.slice(0,Math.max(1,maxColors));
+  const rgb=h=>{const x=h.replace('#','');return [parseInt(x.slice(0,2),16),parseInt(x.slice(2,4),16),parseInt(x.slice(4,6),16)]};
+  const nearest=id=>{
+    const c=defaultPalette.find(x=>x.id===id); if(!c)return keep[0]?.id||id;
+    const a=rgb(c.hex); let best=keep[0],bd=Infinity;
+    keep.forEach(k=>{const b=rgb(k.hex),d=(a[0]-b[0])**2+(a[1]-b[1])**2+(a[2]-b[2])**2;if(d<bd){bd=d;best=k}});
+    return best?.id||id;
+  };
+  return grid.map(row=>row.map(nearest));
+}
+function templateToProject(t,opts={}){
+  const rows=Math.max(2,Math.min(100,Number(opts.rows)||t.rows));
+  const cols=Math.max(2,Math.min(100,Number(opts.cols)||t.cols));
+  const beadSize=Math.max(1,Math.min(20,Number(opts.beadSize)||3));
+  const maxColors=Math.max(1,Math.min(32,Number(opts.colors)||32));
+  let grid=resizeTemplateGrid(templateMatrix(t),rows,cols);
+  grid=reduceTemplateColors(grid,maxColors);
   return ensurePalette({
-    id:uid(),name:t.name,rows:t.rows,cols:t.cols,beadSize:3,technique:t.technique,
+    id:uid(),name:t.name,rows,cols,beadSize,technique:t.technique,
     palette:JSON.parse(JSON.stringify(defaultPalette)),grid,
     createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),templateType:t.type
   });
@@ -139,13 +173,22 @@ function renderTemplates(category='Todos'){
     const preview=document.createElement('div'); preview.className='templatePreview';
     renderTemplatePreview(t,preview);
     const body=document.createElement('div'); body.className='templateBody';
-    body.innerHTML=`<div class="templateBadges"><span>${t.category}</span><span>${t.type}</span></div><h3>${escapeHtml(t.name)}</h3><p>${t.rows}×${t.cols} · ${escapeHtml(t.technique)}</p>`;
-    const btn=document.createElement('button'); btn.className='primary templateUse'; btn.textContent='Usar modelo';
-    btn.onclick=()=>{project=templateToProject(t);openProject(project);toast('Modelo carregado: '+t.name)};
+    const nativeColors=new Set(t.pattern.join('').split('').filter(ch=>ch!=='.').map(ch=>t.map[ch]).filter(Boolean)).size;
+    body.innerHTML=`<div class="templateBadges"><span>${t.category}</span><span>${t.type}</span></div><h3>${escapeHtml(t.name)}</h3><p>Base ${t.rows}×${t.cols} · ${escapeHtml(t.technique)} · ${nativeColors} cores</p>
+      <div class="templateCustomize">
+        <label>Linhas<input class="tplRows" type="number" min="2" max="100" value="${t.rows}"></label>
+        <label>Colunas<input class="tplCols" type="number" min="2" max="100" value="${t.cols}"></label>
+        <label>Miçanga (mm)<input class="tplBead" type="number" min="1" max="20" step="0.5" value="3"></label>
+        <label>Cores<input class="tplColors" type="number" min="1" max="32" value="${nativeColors}"></label>
+      </div>`;
+    const info=document.createElement('div'); info.className='templateSizeInfo';
+    const updateInfo=()=>{const r=+body.querySelector('.tplRows').value||t.rows,c=+body.querySelector('.tplCols').value||t.cols,b=+body.querySelector('.tplBead').value||3;info.textContent=`Peça aprox.: ${(c*b/10).toFixed(1)} × ${(r*b/10).toFixed(1)} cm`;};
+    body.querySelectorAll('input').forEach(i=>i.addEventListener('input',updateInfo)); updateInfo(); body.appendChild(info);
+    const btn=document.createElement('button'); btn.className='primary templateUse'; btn.textContent='Usar modelo personalizado';
+    btn.onclick=()=>{const opts={rows:body.querySelector('.tplRows').value,cols:body.querySelector('.tplCols').value,beadSize:body.querySelector('.tplBead').value,colors:body.querySelector('.tplColors').value};project=templateToProject(t,opts);openProject(project);toast('Modelo carregado: '+t.name)};
     body.appendChild(btn); card.append(preview,body); wrap.appendChild(card);
   });
 }
-
 
 function ensurePalette(p){
   if(!p.palette) p.palette=[];

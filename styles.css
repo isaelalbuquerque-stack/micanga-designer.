@@ -752,3 +752,9 @@ button{transition:transform .12s ease,box-shadow .18s ease,filter .18s ease}
 .templateBadges{display:flex;gap:5px;flex-wrap:wrap}.templateBadges span{font-size:.62rem;background:var(--lilac-soft);color:var(--primary-dark);padding:3px 6px;border-radius:999px;font-weight:800}
 .templateUse{margin-top:auto;padding:8px 9px;font-size:.78rem;border-radius:10px}
 @media(min-width:650px){.templatesList{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+/* V5.14 — personalização dos modelos */
+.templateCustomize{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px}
+.templateCustomize label{font-size:.66rem;color:var(--muted);font-weight:750;display:grid;gap:3px}
+.templateCustomize input{width:100%;min-width:0;padding:7px 6px;border:1px solid var(--border);border-radius:8px;font-size:.82rem;background:#fff}
+.templateSizeInfo{font-size:.68rem;font-weight:800;color:var(--primary-dark);background:var(--lilac-soft);padding:6px 8px;border-radius:8px}

@@ -207,3 +207,10 @@ A associação direta do arquivo `.jpm` depende do suporte do navegador/sistema 
 - Categorias: Bandeiras, Futebol, Brincos, Pulseiras e Cordões.
 - Modelos iniciais incluem Brasil, Argentina, Portugal, França e Itália; padrões inspirados nas cores de Flamengo, Corinthians, Palmeiras, São Paulo, Vasco, Paysandu e Remo; além de modelos geométricos de brinco, pulseira e cordão.
 - Cada modelo abre diretamente no editor e pode ser recolorido, alterado e salvo como novo projeto.
+
+## V5.14 — Modelos personalizáveis e escudos detalhados
+- Modelos prontos agora permitem escolher linhas, colunas, tamanho da miçanga e quantidade de cores.
+- Mostra estimativa do tamanho físico da peça em centímetros.
+- Redimensiona o diagrama antes de abrir no editor.
+- Novos modelos detalhados de Flamengo e Vasco para grades maiores.
+- Mantidos os modelos simples para peças pequenas.
