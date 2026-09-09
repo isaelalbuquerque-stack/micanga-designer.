@@ -149,3 +149,9 @@ A associação direta do arquivo `.jpm` depende do suporte do navegador/sistema 
 - Zoom alterado para preservar o comportamento sticky no Chrome/Android.
 - Cor de fundo da grade agora altera também a área vazia e as células sem cor.
 - Cache do PWA atualizado para forçar o carregamento da nova versão.
+
+
+## Atualização V5.6
+- Corrigido editor aparecendo por baixo das telas Home/Novo projeto.
+- Editor agora só é exibido quando a view editorView está ativa.
+- Mantidas correções V5.5 de barras fixas, réguas sticky e fundo da grade.

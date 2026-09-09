@@ -169,10 +169,13 @@ button{transition:transform .12s ease,box-shadow .18s ease,filter .18s ease}
    abaixo: tabela
    ========================================================= */
 
-.editorView{
-  display:flex;
+.view.editorView{
+  display:none;
   flex-direction:column;
   gap:8px;
+}
+.view.editorView.active{
+  display:flex;
 }
 .editorView .card{
   margin-bottom:0;
