@@ -176,3 +176,12 @@ A associação direta do arquivo `.jpm` depende do suporte do navegador/sistema 
 - Nova ferramenta ✋ Mão para arrastar a tabela livremente.
 - Réguas continuam dentro do visor com comportamento sticky.
 - Pinça de dois dedos continua controlando o zoom.
+
+
+## V5.10 — Editor compacto com rolagem da página
+- A página inteira volta a rolar normalmente.
+- Barra de ferramentas e barra de cores permanecem travadas no topo durante a rolagem.
+- Ícones e espaçamentos das barras foram reduzidos para aumentar a área útil da grade.
+- Lista de miçangas foi compactada e fica imediatamente abaixo da tabela de edição.
+- A lista possui rolagem interna quando houver muitos itens.
+- A ferramenta Mão da V5.9 foi mantida.

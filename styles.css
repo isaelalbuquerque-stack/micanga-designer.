@@ -580,3 +580,150 @@ button{transition:transform .12s ease,box-shadow .18s ease,filter .18s ease}
 @media(min-width:521px){
   .editorView.active{height:calc(100dvh - 77px);max-height:calc(100dvh - 77px)}
 }
+
+
+/* =========================================================
+   V5.10 — página rolável + barras travadas + editor compacto
+   ========================================================= */
+
+/* A página volta a rolar inteira; ferramentas continuam visíveis. */
+.editorView.active{
+  height:auto !important;
+  max-height:none !important;
+  overflow:visible !important;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+/* Barra de ferramentas menor para liberar mais área de edição. */
+.editorView .toolbar{
+  position:sticky !important;
+  top:69px !important;
+  z-index:60;
+  display:grid;
+  grid-template-columns:repeat(14,34px);
+  gap:3px;
+  padding:4px;
+  border-radius:12px;
+  overflow-x:auto;
+  margin:0;
+  background:var(--card);
+}
+.editorView .toolbar button{
+  width:34px;
+  min-width:34px;
+  height:34px;
+  padding:2px;
+  border-radius:8px;
+  font-size:.88rem;
+  line-height:1;
+}
+
+/* Paleta compacta e fixa imediatamente abaixo da barra principal. */
+.editorView .editorPaletteBar{
+  position:sticky !important;
+  top:111px !important;
+  z-index:59;
+  padding:4px 6px 5px;
+  border-radius:12px;
+  margin:0;
+  background:var(--card);
+}
+.editorPaletteTop{min-height:22px}
+.editorPaletteTop strong{font-size:.74rem}
+.editorPaletteTop .small{
+  padding:3px 7px;
+  min-height:24px;
+  font-size:.68rem;
+}
+.editorPaletteBar .paletteColors{
+  min-height:35px;
+  gap:5px;
+  padding:4px 2px 3px;
+}
+.editorPaletteBar .colorSwatch{
+  min-width:28px;
+  width:28px;
+  height:28px;
+  flex:0 0 28px;
+  border-width:2px;
+}
+.editorPaletteBar .colorSwatch.selected{
+  box-shadow:0 0 0 2px var(--primary),0 2px 5px rgba(139,92,246,.16);
+}
+
+/* A tabela fica logo depois das barras e mantém rolagem própria quando necessário. */
+.editorView .canvasCard{
+  flex:none !important;
+  min-height:0;
+  overflow:hidden;
+  padding:6px;
+  margin:0;
+}
+.editorView #gridViewport{
+  flex:none !important;
+  min-height:310px;
+  max-height:68vh !important;
+  overflow:auto;
+  overscroll-behavior:contain;
+}
+.canvasTop{min-height:30px;padding:0 2px 3px;font-size:.74rem}
+.tableZoom{padding:2px;gap:2px}
+.tableZoom button{height:26px;min-width:26px;padding:0 5px;font-size:.72rem}
+.tableZoom #zoomResetBtn{min-width:46px;font-size:.63rem}
+.editorView .fileActions{padding:0 0 4px;gap:4px}
+.editorView .fileActions button{
+  height:30px;
+  padding:4px 7px;
+  font-size:.65rem;
+  border-radius:8px;
+}
+
+/* Lista de miçangas sempre abaixo da tabela e ocupando pouca altura. */
+.editorView .materialsCard{
+  order:initial;
+  padding:7px 9px;
+  margin:0;
+  border-radius:13px;
+}
+.materialsCard .paletteHead h3{font-size:.82rem}
+.materialsCard .materialsList{
+  max-height:112px;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+}
+.materialsCard .materialRow{
+  grid-template-columns:auto 1fr auto;
+  gap:6px;
+  padding:4px 0;
+  font-size:.72rem;
+}
+.materialsCard .materialDot{width:16px;height:16px}
+.materialsCard .materialName small{font-size:.62rem}
+
+/* Estatísticas continuam disponíveis mais abaixo durante a rolagem da página. */
+.editorView .stats{
+  display:grid !important;
+  padding:7px 4px;
+  margin:0;
+}
+.editorView .stats strong{font-size:.82rem}
+.editorView .stats span{font-size:.62rem}
+
+@media(min-width:521px){
+  .editorView .toolbar{top:77px !important}
+  .editorView .editorPaletteBar{top:119px !important}
+}
+
+@media(max-width:520px){
+  main{padding:7px}
+  .editorView{gap:5px}
+  .editorView .toolbar{grid-template-columns:repeat(14,32px)}
+  .editorView .toolbar button{width:32px;min-width:32px;height:32px;font-size:.82rem}
+  .editorView .editorPaletteBar{top:107px !important}
+  .editorPaletteBar .colorSwatch{min-width:27px;width:27px;height:27px;flex-basis:27px}
+  .editorPaletteBar .paletteColors{min-height:33px}
+  .editorView #gridViewport{min-height:300px;max-height:70vh !important}
+  .materialsCard .materialsList{max-height:96px}
+}
