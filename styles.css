@@ -909,3 +909,159 @@ button{transition:transform .12s ease,box-shadow .18s ease,filter .18s ease}
   .colSelectionBar .rowSelectionInfo{min-width:150px;width:auto!important;flex:0 0 auto}
   .colSelectionBar button{white-space:nowrap;flex:0 0 auto}
 }
+
+/* =========================================================
+   V5.22 — visual compacto aprovado + barras sem sobreposição
+   ========================================================= */
+:root{
+  --jp-header-h:68px;
+  --jp-toolbar-h:50px;
+  --jp-palette-h:52px;
+}
+
+/* Cabeçalho limpo com ações rápidas no editor. */
+.topbar{z-index:1300!important;padding:8px 10px;min-height:64px;background:rgba(249,246,255,.97)}
+.editorHeaderActions{display:none;align-items:stretch;gap:4px;margin-left:auto}
+body.editor-mode .editorHeaderActions{display:flex}
+body.editor-mode #installBtn{display:none!important}
+.editorHeaderActions button{
+  min-width:45px;height:48px;padding:4px 5px;border-radius:12px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+  background:#f1eaff;color:var(--primary-dark);border:1px solid #dacbfa;
+}
+.editorHeaderActions button span{font-size:1.05rem;line-height:1}
+.editorHeaderActions button small{font-size:.52rem;font-weight:800;line-height:1.05}
+.editorHeaderActions button.activeTool{background:var(--primary);color:#fff}
+body.editor-mode .topbarBrand{gap:7px;min-width:0;flex:1}
+body.editor-mode .topbarLogo{width:40px;height:40px;border-radius:11px;flex:0 0 40px}
+body.editor-mode .topbar h1{font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.editor-mode .topbar p{font-size:.72rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Barra principal: 10 controles cabem sem rolagem horizontal. */
+.editorView .toolbar{
+  position:sticky!important;
+  top:var(--jp-header-h)!important;
+  z-index:1200!important;
+  display:grid!important;
+  grid-template-columns:repeat(10,minmax(0,1fr))!important;
+  gap:3px!important;
+  padding:5px!important;
+  overflow:visible!important;
+  border-radius:12px!important;
+  background:rgba(255,255,255,.98)!important;
+  box-shadow:0 2px 8px rgba(62,34,92,.10)!important;
+}
+.editorView .toolbar button{
+  width:auto!important;min-width:0!important;height:42px!important;padding:3px 1px!important;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  border-radius:9px!important;font-size:.85rem!important;overflow:hidden;
+}
+.editorView .toolbar button .toolIcon{font-size:.92rem;line-height:1}
+.editorView .toolbar button small{font-size:.47rem;line-height:1;white-space:nowrap;font-weight:750;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.editorView .toolbar .advancedTool{display:none!important}
+.editorView .toolbar.advanced-open .advancedTool{
+  display:flex!important;
+  grid-row:auto;
+  height:34px!important;
+  font-size:.8rem!important;
+}
+.editorView .toolbar.advanced-open .advancedTool::after{content:attr(title);font-size:.42rem;line-height:1;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.editorView .toolbar .moreToolsBtn{display:flex!important}
+
+/* Paleta numa única faixa, logo abaixo da barra principal. */
+.editorView .editorPaletteBar{
+  position:sticky!important;
+  top:calc(var(--jp-header-h) + var(--jp-toolbar-h))!important;
+  z-index:1190!important;
+  display:flex!important;align-items:center;gap:7px;
+  min-height:48px;padding:5px 7px!important;margin:0!important;
+  border-radius:12px!important;background:rgba(255,255,255,.98)!important;
+  box-shadow:0 2px 7px rgba(62,34,92,.08)!important;
+}
+.editorView .editorPaletteBar.paletteCollapsed{display:none!important}
+.editorView .editorPaletteTop{display:contents!important}
+.editorView .editorPaletteTop strong{order:1;flex:0 0 auto;font-size:.72rem!important}
+.editorView .editorPaletteBar .paletteColors{
+  order:2;flex:1 1 auto;min-width:0;min-height:34px!important;
+  gap:7px!important;padding:3px 3px 4px!important;overflow-x:auto!important;
+}
+.editorView .editorPaletteTop .small{
+  order:3;flex:0 0 auto;min-width:34px;height:32px;padding:2px 6px!important;
+  font-size:0!important;border-radius:10px!important;
+}
+.editorView .editorPaletteTop .small::before{content:'＋';font-size:1rem}
+.editorView .editorPaletteBar .colorSwatch{
+  min-width:28px!important;width:28px!important;height:28px!important;flex:0 0 28px!important;
+}
+
+/* Canvas: modo/zoom/linhas/colunas fica travado; exportação vai para baixo. */
+.editorView .canvasCard{overflow:visible!important;padding:5px!important;display:flex;flex-direction:column}
+.editorView .canvasTop{
+  order:1;position:sticky!important;
+  top:calc(var(--jp-header-h) + var(--jp-toolbar-h) + var(--jp-palette-h))!important;
+  z-index:1180!important;
+  min-height:42px!important;margin:-1px -1px 5px;padding:5px 7px!important;
+  border:1px solid var(--border);border-radius:11px;background:rgba(255,255,255,.98)!important;
+  box-shadow:0 2px 6px rgba(62,34,92,.07);
+  color:var(--text)!important;
+}
+.editorView .canvasTop #viewModeLabel{font-size:.68rem;white-space:nowrap;max-width:115px;overflow:hidden;text-overflow:ellipsis}
+.editorView .tableZoom{margin-left:auto;flex:0 0 auto}
+.editorView .tableZoom button{height:28px!important;min-width:28px!important;padding:0 6px!important}
+.editorView .quickGridInfo{display:flex;gap:4px;margin-left:4px}
+.editorView .quickGridInfo span{
+  display:flex;align-items:center;gap:3px;padding:5px 6px;border-radius:8px;
+  background:#f4edff;color:var(--primary-dark);font-size:.58rem;font-weight:750;white-space:nowrap;
+}
+.editorView .quickGridInfo b{font-size:.65rem}
+
+.editorView #rowSelectionBar{order:2}
+.editorView #colSelectionBar{order:2}
+.editorView #areaSelectionBar{order:2}
+.editorView:not(.advanced-open) #rowSelectionBar,
+.editorView:not(.advanced-open) #colSelectionBar,
+.editorView:not(.advanced-open) #areaSelectionBar{display:none!important}
+.editorView .rowSelectionBar{margin:3px 0!important;padding:5px!important;gap:4px!important}
+.editorView #gridViewport{order:3;max-height:72vh!important;min-height:360px;border-radius:11px!important}
+.editorView .fileActions{
+  order:4;display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:5px!important;padding:7px 0 1px!important;overflow:visible!important;
+}
+.editorView .fileActions .duplicateSaveAction{display:none!important}
+.editorView .fileActions button{height:38px!important;padding:5px 4px!important;font-size:.66rem!important;white-space:nowrap;min-width:0}
+.editorView .fileActions .editorImageBtn{grid-column:1/-1;height:42px!important;font-size:.76rem!important}
+
+/* Conteúdo secundário continua abaixo da área principal. */
+.editorView .materialsCard,.editorView .stats{position:relative;z-index:1}
+
+@media(max-width:520px){
+  main{padding:5px!important}
+  body.editor-mode .topbar{padding:6px 7px;min-height:60px}
+  body.editor-mode .topbarLogo{width:36px;height:36px;flex-basis:36px}
+  body.editor-mode .topbar h1{font-size:.88rem}
+  body.editor-mode .topbar p{font-size:.64rem}
+  .editorHeaderActions{gap:2px}
+  .editorHeaderActions button{min-width:38px;width:38px;height:44px;padding:3px 2px}
+  .editorHeaderActions button span{font-size:.92rem}
+  .editorHeaderActions button small{font-size:.44rem}
+  .editorView .toolbar{gap:2px!important;padding:4px!important}
+  .editorView .toolbar button{height:38px!important}
+  .editorView .toolbar button .toolIcon{font-size:.82rem}
+  .editorView .toolbar button small{font-size:.42rem}
+  .editorView .editorPaletteBar{min-height:44px;padding:4px 5px!important;gap:5px}
+  .editorView .editorPaletteBar .colorSwatch{min-width:26px!important;width:26px!important;height:26px!important;flex-basis:26px!important}
+  .editorView .canvasTop{min-height:38px!important;padding:4px!important;gap:3px}
+  .editorView .canvasTop #viewModeLabel{max-width:88px;font-size:.6rem}
+  .editorView .tableZoom button{height:26px!important;min-width:25px!important;padding:0 4px!important}
+  .editorView .tableZoom #zoomResetBtn{min-width:39px!important}
+  .editorView .quickGridInfo span{padding:4px;font-size:.5rem}
+  .editorView #gridViewport{min-height:380px!important;max-height:74vh!important}
+}
+
+@media(max-width:390px){
+  body.editor-mode .topbarBrand h1{font-size:.78rem}
+  .editorHeaderActions button{min-width:34px;width:34px}
+  .editorHeaderActions button small{display:none}
+  .editorView .toolbar button small{font-size:.39rem}
+  .editorView .quickGridInfo span{padding:4px 3px}
+}

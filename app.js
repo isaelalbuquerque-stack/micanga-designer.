@@ -991,6 +991,8 @@ function resetTheme(){
 
 function showView(id){
   views.forEach(v=>$(v).classList.toggle("active",v===id));
+  document.body.classList.toggle("editor-mode",id==="editorView");
+  requestAnimationFrame(()=>updateEditorStickyOffsets());
 }
 
 function toast(msg){
@@ -1100,19 +1102,18 @@ function renderGrid(){
         e.preventDefault();
         if(tool==="area"){selectAreaCell(r,c);return;}
 
-        // Célula já colorida: não sobrescreve direto.
-        // Pede uma nova cor usando a mesma paleta do projeto.
-        if(project.grid[r][c]){
+        // V5.22 — célula colorida abre troca de cor SOMENTE com o lápis.
+        // A borracha deve apagar imediatamente, inclusive ao arrastar.
+        if(tool==="paint" && project.grid[r][c]){
           isPointerDown=false;
           openReplaceColorPicker(r,c);
           return;
         }
 
-        // Célula em branco: aplica imediatamente a cor selecionada.
         isPointerDown=true;
         pushHistory();
-        applyAt(r,c);
-        bead.setPointerCapture?.(e.pointerId);
+        // Não recria a grade no pointerdown; preserva o gesto contínuo.
+        applyAt(r,c,false);
       });
       bead.addEventListener("pointerenter",()=>{
         if(isPointerDown && tool!=="pan") applyAt(r,c,false);
@@ -1173,6 +1174,8 @@ function updateToolButtons(){
 }
 
 function updateStats(){
+  if($("quickRowsInfo") && project) $("quickRowsInfo").textContent=project.rows;
+  if($("quickColsInfo") && project) $("quickColsInfo").textContent=project.cols;
   const counts={}; let total=0;
   project.grid.forEach(row=>row.forEach(id=>{
     if(id){counts[id]=(counts[id]||0)+1; total++}
@@ -1370,6 +1373,105 @@ $("installBtn").onclick=async()=>{
 if("serviceWorker" in navigator){
   window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js"));
 }
+
+
+// =========================================================
+// V5.22 — interface compacta inspirada no novo visual aprovado
+// =========================================================
+function updateEditorStickyOffsets(){
+  const root=document.documentElement;
+  const header=document.querySelector('.topbar');
+  const toolbar=document.querySelector('.editorView .toolbar');
+  const palette=document.querySelector('.editorView .editorPaletteBar');
+  const hh=header?.offsetHeight||68;
+  const th=document.body.classList.contains('editor-mode')?(toolbar?.offsetHeight||50):0;
+  const ph=document.body.classList.contains('editor-mode')?(palette?.offsetHeight||52):0;
+  root.style.setProperty('--jp-header-h',`${hh}px`);
+  root.style.setProperty('--jp-toolbar-h',`${th}px`);
+  root.style.setProperty('--jp-palette-h',`${ph}px`);
+}
+
+function setupV522Ui(){
+  const topbar=document.querySelector('.topbar');
+  const toolbar=document.querySelector('.editorView .toolbar');
+  const canvasTop=document.querySelector('.editorView .canvasTop');
+  const fileActions=document.querySelector('.editorView .fileActions');
+  if(!topbar||!toolbar||!canvasTop||!fileActions||toolbar.dataset.v522Ready) return;
+  toolbar.dataset.v522Ready='1';
+
+  // Ações rápidas do cabeçalho — aparecem apenas dentro do editor.
+  const headerActions=document.createElement('div');
+  headerActions.className='editorHeaderActions';
+  headerActions.innerHTML=`
+    <button type="button" id="headerOpenBtn" title="Abrir projetos"><span>📁</span><small>Abrir</small></button>
+    <button type="button" id="headerSaveBtn" title="Salvar projeto"><span>💾</span><small>Salvar</small></button>
+    <button type="button" id="headerShareBtn" title="Compartilhar"><span>↗</span><small>Compart.</small></button>
+    <button type="button" id="headerMenuBtn" title="Mais ferramentas"><span>☰</span><small>Menu</small></button>`;
+  topbar.appendChild(headerActions);
+
+  // Barra principal: só os controles de uso mais frequente ficam sempre visíveis.
+  const labels={
+    backHomeBtn:['⌂','Início'], paletteBtn:['🎨','Cor'], paintToolBtn:['✏️','Lápis'],
+    eraseToolBtn:['🧽','Borracha'], panToolBtn:['✋','Mão'], areaToolBtn:['▣','Seleção'],
+    mirrorHBtn:['⇆','Espelhar'], undoBtn:['↶','Desfazer'], redoBtn:['↷','Refazer']
+  };
+  Object.entries(labels).forEach(([id,[icon,label]])=>{
+    const b=$(id); if(!b) return;
+    b.innerHTML=`<span class="toolIcon">${icon}</span><small>${label}</small>`;
+    b.classList.add('mainTool');
+  });
+  const mainIds=new Set(Object.keys(labels));
+  [...toolbar.querySelectorAll('button')].forEach(b=>{if(!mainIds.has(b.id)) b.classList.add('advancedTool')});
+  const more=document.createElement('button');
+  more.type='button'; more.id='moreToolsBtn'; more.className='mainTool moreToolsBtn';
+  more.innerHTML='<span class="toolIcon">•••</span><small>Mais</small>';
+  toolbar.appendChild(more);
+
+  // Informações enxutas de linhas/colunas ao lado do zoom.
+  const info=document.createElement('div');
+  info.className='quickGridInfo';
+  info.innerHTML='<span>Linhas <b id="quickRowsInfo">—</b></span><span>Colunas <b id="quickColsInfo">—</b></span>';
+  canvasTop.appendChild(info);
+
+  // Exportações ficam abaixo da tabela; salvar saiu daqui para evitar duplicação.
+  $('saveBtn')?.classList.add('duplicateSaveAction');
+  const imgBtn=document.createElement('button');
+  imgBtn.type='button'; imgBtn.id='editorImageBtn'; imgBtn.className='primary editorImageBtn';
+  imgBtn.textContent='📷 Foto → Diagrama';
+  fileActions.appendChild(imgBtn);
+
+  const setAdvanced=(on)=>{
+    toolbar.classList.toggle('advanced-open',!!on);
+    document.querySelector('.editorView')?.classList.toggle('advanced-open',!!on);
+    more.classList.toggle('activeTool',!!on);
+    $('headerMenuBtn')?.classList.toggle('activeTool',!!on);
+    requestAnimationFrame(updateEditorStickyOffsets);
+  };
+  more.onclick=()=>setAdvanced(!toolbar.classList.contains('advanced-open'));
+  $('headerMenuBtn').onclick=()=>setAdvanced(!toolbar.classList.contains('advanced-open'));
+  $('headerOpenBtn').onclick=()=>{saveCurrent();renderProjects();showView('projectsView')};
+  $('headerSaveBtn').onclick=saveCurrent;
+  $('headerShareBtn').onclick=shareJpm;
+  imgBtn.onclick=()=>{saveCurrent();showView('imageProjectView')};
+
+  // Melhora o arraste contínuo da borracha/lápis em telas touch.
+  const viewport=$('gridViewport');
+  viewport?.addEventListener('pointermove',(e)=>{
+    if(!isPointerDown || tool==='pan' || tool==='area') return;
+    const hit=document.elementFromPoint(e.clientX,e.clientY)?.closest?.('.bead');
+    if(!hit || !viewport.contains(hit)) return;
+    const r=Number(hit.dataset.r), c=Number(hit.dataset.c);
+    if(Number.isInteger(r)&&Number.isInteger(c)) applyAt(r,c,false);
+  },{passive:true});
+
+  const ro=window.ResizeObserver?new ResizeObserver(updateEditorStickyOffsets):null;
+  [topbar,toolbar,$('editorPaletteBar')].forEach(el=>el&&ro?.observe(el));
+  window.addEventListener('resize',updateEditorStickyOffsets,{passive:true});
+  updateEditorStickyOffsets();
+  if(project) updateStats();
+}
+
+setupV522Ui();
 
 applyTheme(loadTheme());
 updateLastProject();

@@ -1,3 +1,12 @@
+# V5.22 — Visual compacto + borracha corrigida
+
+- Interface do editor reorganizada conforme o visual aprovado: cabeçalho com Abrir/Salvar/Compartilhar/Menu, barra principal compacta, paleta em faixa única, modo/zoom/linhas/colunas compactos e exportações abaixo da tabela.
+- Barras travadas com offsets calculados automaticamente para evitar sobreposição ao rolar.
+- Ferramentas avançadas ficam em **Mais/Menu**, reduzindo a carga visual sem remover recursos.
+- Borracha corrigida: toca e arrasta apagando células coloridas sem abrir o seletor de troca de cor.
+- Mantidas seleção de linhas/colunas/área, espelhamento, tear, captura Foto → Diagrama e demais funções da V5.21.
+- Cache do PWA atualizado para V5.22.
+
 # V5.19 — Seleção e cópia de múltiplas linhas
 
 - Toque nos números da régua vertical para selecionar/desmarcar qualquer quantidade de linhas.
