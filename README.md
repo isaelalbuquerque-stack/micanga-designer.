@@ -118,3 +118,31 @@ A associação direta do arquivo `.jpm` depende do suporte do navegador/sistema 
 - Código da miçanga visível na paleta
 - Ferramenta de seleção de cor diretamente pela célula
 - Busca de miçanga por nome ou código ao editar a célula
+
+
+## V6.1 — correções de usabilidade e digitalização
+- Barra de ferramentas compacta com botão Mais
+- Modo Mão para arrastar o tear com um dedo
+- Paleta abaixo da grade, sem cobrir o desenho
+- Paleta em grade, sem depender de barra horizontal
+- Automático começa em 2 cores e decide a quantidade pela foto
+- Detecção automática do fundo pela borda da imagem
+- Recorte focado na região densa de miçangas
+- Amostragem do centro de cada célula para evitar mistura com o fundo
+- Fundo escuro não vira mais uma cor dominante do diagrama
+
+
+## V6.2 — Seleção direta por célula
+- Toque curto em qualquer miçanga abre o seletor de cores daquela célula.
+- O seletor mostra cor, nome e código da miçanga e permite busca por nome/código.
+- Arrastar com o pincel continua pintando várias células.
+- Segurar brevemente também inicia pintura com a cor já selecionada.
+- O botão 🎯 permanece como modo dedicado de seleção por célula.
+
+
+## V6.3 — Botão Voltar do Android
+- O botão Voltar do celular agora navega dentro do aplicativo em vez de fechar imediatamente.
+- Editor, Imagem → Diagrama, Novo projeto e Meus projetos retornam corretamente para a tela inicial.
+- Na tela inicial, o primeiro Voltar mostra “Pressione voltar novamente para sair”.
+- Um segundo Voltar em até ~2 segundos libera a saída do aplicativo.
+- Mantidas as funções V6.2: seleção de cor por célula, modo Mão, zoom por pinça e digitalização melhorada.

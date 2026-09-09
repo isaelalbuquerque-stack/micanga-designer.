@@ -167,3 +167,31 @@ button{transition:transform .12s ease,box-shadow .18s ease,filter .18s ease}
 .cellColorPicker{position:fixed;inset:auto 10px 10px 10px;z-index:70;max-height:72vh;overflow:auto;background:#fff;border:1px solid var(--border);border-radius:20px;padding:12px;box-shadow:0 18px 50px rgba(47,34,64,.3)}.cellPickerHead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}.cellPickerHead button{font-size:24px;padding:5px 12px;background:var(--lilac-soft)}.cellColorOptions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}.cellColorOption{display:grid;grid-template-columns:34px 1fr;gap:9px;align-items:center;text-align:left;padding:9px;background:var(--lilac-soft2);border:1px solid var(--border)}.cellColorOptionDot{width:32px;height:32px;border-radius:50%;border:1px solid rgba(0,0,0,.18)}.cellColorOption small{display:block;color:var(--muted)}
 .detectedColorsBox{margin:10px 0;padding:10px;border:1px solid var(--border);border-radius:12px;background:var(--lilac-soft2)}#detectedColorsPreview{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}.detectedChip{display:flex;align-items:center;gap:5px;font-size:.75rem}.detectedChip i{width:22px;height:22px;border-radius:50%;border:1px solid rgba(0,0,0,.15)}
 @media(max-width:520px){.cellColorOptions{grid-template-columns:1fr}.floatingPalette{bottom:8px;left:8px;width:calc(100vw - 16px)}}
+
+/* V6.1 — interface compacta, paleta abaixo da grade e modo Mão */
+.toolbar{display:block;position:sticky;top:77px;z-index:15;padding:7px;overflow:visible}
+.toolbarMain{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px}
+.toolbarMain button{min-width:0;padding:9px 2px;font-size:1.05rem}
+.moreToolsPanel{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-top:7px;padding-top:7px;border-top:1px solid var(--border)}
+.moreToolsPanel.hidden{display:none!important}
+.moreToolsPanel button{min-width:0;padding:8px 3px;font-size:.85rem}
+.fileActions{display:none}
+.inlinePalette,.floatingPalette{position:static!important;left:auto!important;top:auto!important;bottom:auto!important;width:auto!important;min-width:0!important;z-index:auto!important;margin-bottom:14px!important;box-shadow:var(--shadow)!important}
+.inlinePalette .paletteColors,.floatingPalette .paletteColors{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:10px;max-height:none!important;overflow:visible!important;padding:12px 2px 4px;min-height:0}
+.inlinePalette .colorSwatch,.floatingPalette .colorSwatch{justify-self:center;margin:0 0 18px;min-width:46px;width:46px;height:46px}
+.inlinePalette.collapsed #paletteColors,.floatingPalette.collapsed #paletteColors{display:none!important}
+.inlinePalette.collapsed,.floatingPalette.collapsed{width:auto!important;min-width:0!important}
+#gridViewport.panMode{cursor:grab}
+#gridViewport.panMode:active{cursor:grabbing}
+@media(max-width:520px){
+  .toolbar{top:70px;padding:6px}
+  .toolbarMain{grid-template-columns:repeat(8,minmax(0,1fr));gap:4px}
+  .toolbarMain button{padding:8px 1px;font-size:1rem;border-radius:10px}
+  .moreToolsPanel{grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}
+  .moreToolsPanel button{padding:7px 2px;border-radius:10px}
+  .inlinePalette .paletteColors,.floatingPalette .paletteColors{grid-template-columns:repeat(5,1fr);gap:8px}
+}
+
+/* V6.2 — seleção direta por célula */
+.cellTapHint{margin:-6px 4px 8px;text-align:center;font-size:.76rem;font-weight:700;color:var(--muted)}
+.cellColorPicker{overscroll-behavior:contain}
