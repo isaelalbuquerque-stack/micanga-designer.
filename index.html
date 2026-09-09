@@ -38,6 +38,8 @@
           <button id="newProjectBtn" class="primary big">＋ Criar novo diagrama</button>
           <button id="imageProjectBtn" class="secondary big">🖼️ Imagem → Diagrama</button>
           <button id="openProjectsBtn" class="secondary big">📁 Meus projetos</button>
+          <button id="importProjectBtn" class="secondary big">📥 Importar projeto .JPM</button>
+          <input id="projectFileInput" type="file" accept=".jpm,application/json,application/x-jpmicangas" class="hidden" />
         </div>
 
         <div class="card">
@@ -101,6 +103,7 @@
       <section id="editorView" class="view editorView">
         <div class="toolbar card">
           <button id="backHomeBtn" title="Início">⌂</button>
+          <button id="paletteBtn" class="activeTool" title="Mostrar/ocultar paleta">🎨</button>
           <button id="paintToolBtn" class="activeTool" title="Pincel">✏️</button>
           <button id="eraseToolBtn" title="Borracha">🧽</button>
           <button id="undoBtn" title="Desfazer">↶</button>
@@ -112,9 +115,22 @@
           <button id="zoomResetBtn" title="Zoom atual">100%</button>
           <button id="zoomInBtn" title="Aumentar zoom">＋</button>
           <button id="loomBtn" title="Visualização de tear">🧵</button>
+          <button id="rotateBtn" title="Girar 90°">⟳</button>
           <button id="bgQuickBtn" title="Mudar fundo">🎨</button>
           <button id="clearBtn" title="Limpar">🗑</button>
           <button id="saveBtn" class="saveTool" title="Salvar">💾</button>
+          <button id="saveAsBtn" title="Salvar como">📝</button>
+          <button id="exportJpegBtn" title="Salvar JPEG">JPG</button>
+          <button id="exportPdfBtn" title="Salvar PDF">PDF</button>
+          <button id="shareProjectBtn" title="Compartilhar projeto .JPM">↗</button>
+        </div>
+
+        <div id="editorPaletteBar" class="editorPaletteBar card">
+          <div class="editorPaletteTop">
+            <strong>Cores</strong>
+            <button id="addColorBtn" class="small" title="Adicionar cor">＋ Cor</button>
+          </div>
+          <div id="paletteColors" class="paletteColors"></div>
         </div>
 
         <div class="canvasCard card">
@@ -122,8 +138,19 @@
             <span id="viewModeLabel">Modo: Grade</span>
             <span id="zoomLabel">Zoom 100%</span>
           </div>
+          <div class="fileActions">
+            <button id="quickJpmBtn" class="secondary">Projeto .JPM</button>
+            <button id="quickJpegBtn" class="secondary">JPEG</button>
+            <button id="quickPdfBtn" class="secondary">PDF</button>
+            <button id="quickShareBtn" class="secondary">Compartilhar</button>
+          </div>
           <div id="gridViewport">
-            <div id="beadGrid" aria-label="Grade de miçangas"></div>
+            <div id="gridStage">
+              <div class="rulerCorner" aria-hidden="true"></div>
+              <div id="columnRuler" class="columnRuler" aria-label="Colunas"></div>
+              <div id="rowRuler" class="rowRuler" aria-label="Linhas"></div>
+              <div id="beadGrid" aria-label="Grade de miçangas"></div>
+            </div>
           </div>
         </div>
 
@@ -131,14 +158,6 @@
           <div><strong id="totalBeads">0</strong><span>Miçangas</span></div>
           <div><strong id="totalColors">0</strong><span>Cores</span></div>
           <div><strong id="dimensions">0 × 0 cm</strong><span>Aprox.</span></div>
-        </div>
-
-        <div class="palette card">
-          <div class="paletteHead">
-            <h3>Paleta</h3>
-            <button id="addColorBtn" class="small">＋ Cor</button>
-          </div>
-          <div id="paletteColors" class="paletteColors"></div>
         </div>
 
         <div class="card">

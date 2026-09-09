@@ -85,3 +85,34 @@ Observação: a conversão é aproximada. Fotos com fundo simples, boa iluminaç
 - Cor padrão do fundo atualizada para lilás claro
 - Cor padrão da grade atualizada para branco-lilás
 - Mantidas as funções de imagem → diagrama, zoom, espelhamento, tear, paleta e personalização
+
+
+## V5 — Projetos compartilháveis e exportação
+
+- Zoom de **5% a 500%**
+- Régua com colunas A, B, C... e linhas 1, 2, 3...
+- Espelhar horizontal e vertical
+- Girar 90°
+- 48 cores padrão
+- Exportar em JPEG
+- Exportar em PDF
+- Salvar projeto completo em `.jpm`
+- Importar `.jpm` em outro celular
+- Compartilhar `.jpm` pela folha de compartilhamento quando suportado
+- Salvar como cópia
+- Ícones JP 192×192 e 512×512
+- Cache offline V5
+
+A associação direta do arquivo `.jpm` depende do suporte do navegador/sistema operacional. O botão “Importar projeto .JPM” funciona como alternativa segura.
+
+
+## V5.1 — Organização do editor
+- Primeira barra mantém os botões de ações do editor.
+- Botão 🎨 Paleta adicionado à primeira barra.
+- A paleta abre imediatamente abaixo da barra de ações.
+- As cores exibidas vêm diretamente de `project.palette`, a mesma tabela de cores do projeto.
+- A cor selecionada fica destacada.
+- Botão `＋ Cor` permanece junto da paleta.
+- A tabela/grade fica logo abaixo da paleta.
+- Menus e botões foram compactados para aproveitar melhor a altura da tela no celular.
+- Estrutura da grade, réguas e modo Tear da V5 foram preservados.
