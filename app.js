@@ -36,27 +36,11 @@ const defaultPalette = [
   {id:"c29", name:"Rosa claro", code:"029", hex:"#f4b1ca"},
   {id:"c30", name:"Mostarda", code:"030", hex:"#b98d22"},
   {id:"c31", name:"Terracota", code:"031", hex:"#b75f43"},
-  {id:"c32", name:"Grafite", code:"032", hex:"#4d5056"},
-  {id:"c33", name:"Lavanda", code:"033", hex:"#c4a7e7"},
-  {id:"c34", name:"Ameixa", code:"034", hex:"#6f2f72"},
-  {id:"c35", name:"Fúcsia", code:"035", hex:"#e43bb5"},
-  {id:"c36", name:"Rosa antigo", code:"036", hex:"#c98c9f"},
-  {id:"c37", name:"Azul royal", code:"037", hex:"#2448c8"},
-  {id:"c38", name:"Ciano", code:"038", hex:"#21c6d8"},
-  {id:"c39", name:"Menta", code:"039", hex:"#8edbc0"},
-  {id:"c40", name:"Oliva", code:"040", hex:"#7e8b3b"},
-  {id:"c41", name:"Esmeralda", code:"041", hex:"#138a67"},
-  {id:"c42", name:"Chocolate", code:"042", hex:"#5e3828"},
-  {id:"c43", name:"Caramelo", code:"043", hex:"#c9894b"},
-  {id:"c44", name:"Pêssego", code:"044", hex:"#f4aa83"},
-  {id:"c45", name:"Salmão", code:"045", hex:"#ef8f86"},
-  {id:"c46", name:"Marfim", code:"046", hex:"#fff3d2"},
-  {id:"c47", name:"Preto azulado", code:"047", hex:"#18202b"},
-  {id:"c48", name:"Branco gelo", code:"048", hex:"#f4f7fb"}
+  {id:"c32", name:"Grafite", code:"032", hex:"#4d5056"}
 ];
 
 let project = null;
-let tool = "paint"; // paint=lápis, standard=menu por célula, cell=cor fixa por toque
+let tool = "paint";
 let selectedColor = defaultPalette[0].id;
 let symmetry = false;
 let undoStack = [];
@@ -64,9 +48,9 @@ let redoStack = [];
 let isPointerDown = false;
 let deferredPrompt = null;
 let zoomLevel = 1;
-const ZOOM_MIN = 0.05;
-const ZOOM_MAX = 5;
-const ZOOM_STEP = 0.10;
+const ZOOM_MIN = 0.5;
+const ZOOM_MAX = 2.5;
+const ZOOM_STEP = 0.15;
 let pinchStartDistance = 0;
 let pinchStartZoom = 1;
 let panStart = null;
@@ -85,20 +69,19 @@ function ensurePalette(p){
 function clampZoom(v){ return Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, v)); }
 
 function applyZoom(nextZoom, focusX=null, focusY=null){
-  const viewport=$("gridViewport"), stage=$("gridStage");
-  if(!viewport||!stage) return;
+  const viewport=$("gridViewport"), grid=$("beadGrid");
+  if(!viewport||!grid) return;
   const old=zoomLevel, next=clampZoom(nextZoom);
   if(focusX===null) focusX=viewport.clientWidth/2;
   if(focusY===null) focusY=viewport.clientHeight/2;
   const contentX=(viewport.scrollLeft+focusX)/old;
   const contentY=(viewport.scrollTop+focusY)/old;
   zoomLevel=next;
-  stage.style.transform=`scale(${zoomLevel})`;
-  const w=stage.scrollWidth, h=stage.scrollHeight;
-  stage.style.marginRight=`${Math.max(0,(zoomLevel-1)*w)}px`;
-  stage.style.marginBottom=`${Math.max(0,(zoomLevel-1)*h)}px`;
-  viewport.scrollLeft=Math.max(0,contentX*zoomLevel-focusX);
-  viewport.scrollTop=Math.max(0,contentY*zoomLevel-focusY);
+  grid.style.transform=`scale(${zoomLevel})`;
+  grid.style.marginRight=`${Math.max(0,(zoomLevel-1)*grid.scrollWidth)}px`;
+  grid.style.marginBottom=`${Math.max(0,(zoomLevel-1)*grid.scrollHeight)}px`;
+  viewport.scrollLeft=contentX*zoomLevel-focusX;
+  viewport.scrollTop=contentY*zoomLevel-focusY;
   const pct=Math.round(zoomLevel*100);
   $("zoomResetBtn").textContent=`${pct}%`;
   $("zoomLabel").textContent=`Zoom ${pct}%`;
@@ -141,12 +124,10 @@ function setupZoomGestures(){
 }
 
 function setLoomMode(on){
-  loomMode=!!on;
-  const viewport=$("gridViewport");
-  if(viewport) viewport.classList.toggle("loomMode",loomMode);
-  $("loomBtn")?.classList.toggle("activeTool",loomMode);
-  $("viewModeLabel").textContent=loomMode?"Visual: Tear":"Visual: Grade";
-  // IMPORTANTE: visualização não altera tool, selectedColor, grid, réguas ou dimensões.
+  loomMode=on;
+  $("gridViewport").classList.toggle("loomMode",loomMode);
+  $("loomBtn").classList.toggle("activeTool",loomMode);
+  $("viewModeLabel").textContent=loomMode?"Modo: Tear realista":"Modo: Grade";
 }
 
 function mirrorHorizontal(){
@@ -165,124 +146,6 @@ function mirrorVertical(){
   toast("Desenho espelhado verticalmente");
 }
 
-function columnLabel(index){
-  let n=index+1, s="";
-  while(n>0){ n--; s=String.fromCharCode(65+(n%26))+s; n=Math.floor(n/26); }
-  return s;
-}
-function renderRulers(){
-  if(!project) return;
-  const cols=$("columnRuler"), rows=$("rowRuler");
-  if(!cols||!rows) return;
-  cols.innerHTML=""; rows.innerHTML="";
-  cols.style.gridTemplateColumns=`repeat(${project.cols},28px)`;
-  rows.style.gridTemplateRows=`repeat(${project.rows},28px)`;
-  for(let c=0;c<project.cols;c++){
-    const el=document.createElement("div"); el.className="rulerCell"; el.textContent=columnLabel(c); cols.appendChild(el);
-  }
-  for(let r=0;r<project.rows;r++){
-    const el=document.createElement("div"); el.className="rulerCell"; el.textContent=String(r+1); rows.appendChild(el);
-  }
-}
-function rotate90(){
-  if(!project) return;
-  pushHistory();
-  const old=project.grid, nr=project.cols, nc=project.rows;
-  const rotated=Array.from({length:nr},()=>Array(nc).fill(null));
-  for(let r=0;r<project.rows;r++) for(let c=0;c<project.cols;c++) rotated[c][project.rows-1-r]=old[r][c];
-  project.grid=rotated; project.rows=nr; project.cols=nc; renderGrid(); toast("Desenho girado 90°");
-}
-function safeFileName(name){
-  return (name||"projeto").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-zA-Z0-9_-]+/g,"-").replace(/^-+|-+$/g,"").slice(0,70)||"projeto";
-}
-function downloadBlob(blob, filename){
-  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=filename; document.body.appendChild(a); a.click();
-  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1200);
-}
-function projectPackage(){
-  return {format:"JPmiçangas Designer",version:5,extension:".jpm",exportedAt:new Date().toISOString(),project:JSON.parse(JSON.stringify(project))};
-}
-function exportJpm(download=true){
-  if(!project) return null;
-  saveCurrent();
-  const blob=new Blob([JSON.stringify(projectPackage(),null,2)],{type:"application/x-jpmicangas"});
-  if(download) downloadBlob(blob,`${safeFileName(project.name)}.jpm`);
-  return blob;
-}
-async function importJpmFile(file){
-  try{
-    const data=JSON.parse(await file.text()), imported=data.project||data;
-    if(!imported||!Array.isArray(imported.grid)||!imported.rows||!imported.cols) throw new Error("Formato inválido");
-    imported.id=uid(); imported.name=String(imported.name||"Projeto importado");
-    imported.createdAt=imported.createdAt||new Date().toISOString(); imported.updatedAt=new Date().toISOString();
-    openProject(imported); saveCurrent(); toast("Projeto .JPM importado");
-  }catch(err){ console.error(err); toast("Arquivo .JPM inválido"); }
-}
-async function shareJpm(){
-  if(!project) return;
-  const blob=exportJpm(false), file=new File([blob],`${safeFileName(project.name)}.jpm`,{type:"application/x-jpmicangas"});
-  if(navigator.canShare?.({files:[file]})&&navigator.share){
-    try{ await navigator.share({title:`JPmiçangas — ${project.name}`,text:"Projeto JPmiçangas Designer",files:[file]}); return; }
-    catch(e){ if(e?.name==="AbortError") return; }
-  }
-  downloadBlob(blob,file.name); toast("Arquivo .JPM salvo para compartilhar");
-}
-function buildExportCanvas(){
-  if(!project) return null;
-  const cell=34,ruler=38,pad=24,titleH=58,w=pad*2+ruler+project.cols*cell,h=pad*2+titleH+ruler+project.rows*cell;
-  const canvas=document.createElement("canvas"); canvas.width=Math.max(640,w); canvas.height=Math.max(480,h);
-  const ctx=canvas.getContext("2d"); ctx.fillStyle=loadTheme().gridBg||"#fffaff"; ctx.fillRect(0,0,canvas.width,canvas.height);
-  ctx.fillStyle="#4c1d75"; ctx.font="bold 22px system-ui"; ctx.fillText(project.name||"Projeto JPmiçangas",pad,34);
-  ctx.font="13px system-ui"; ctx.fillText(`${project.rows} linhas × ${project.cols} colunas • ${project.technique||""}`,pad,54);
-  const ox=pad+ruler,oy=pad+titleH+ruler; ctx.textAlign="center";ctx.textBaseline="middle";ctx.font="bold 11px system-ui";ctx.fillStyle="#5b3a78";
-  for(let c=0;c<project.cols;c++) ctx.fillText(columnLabel(c),ox+c*cell+cell/2,oy-ruler/2);
-  for(let r=0;r<project.rows;r++) ctx.fillText(String(r+1),ox-ruler/2,oy+r*cell+cell/2);
-  for(let r=0;r<project.rows;r++) for(let c=0;c<project.cols;c++){
-    const x=ox+c*cell+cell/2,y=oy+r*cell+cell/2,id=project.grid[r][c],color=project.palette.find(p=>p.id===id);
-    ctx.beginPath();ctx.arc(x,y,cell*.38,0,Math.PI*2);ctx.fillStyle=color?.hex||"#f4eee9";ctx.fill();
-    ctx.lineWidth=1;ctx.strokeStyle="rgba(0,0,0,.22)";ctx.stroke();
-  }
-  return canvas;
-}
-function exportJpeg(){
-  const canvas=buildExportCanvas(); if(!canvas)return;
-  canvas.toBlob(blob=>downloadBlob(blob,`${safeFileName(project.name)}.jpg`),"image/jpeg",.94); toast("JPEG gerado");
-}
-function asciiBytes(s){return new TextEncoder().encode(s)}
-function concatBytes(parts){const len=parts.reduce((n,p)=>n+p.length,0),out=new Uint8Array(len);let off=0;parts.forEach(p=>{out.set(p,off);off+=p.length});return out}
-function canvasToPdfBlob(canvas){
-  const jpg=Uint8Array.from(atob(canvas.toDataURL("image/jpeg",.92).split(",")[1]),c=>c.charCodeAt(0));
-  const pageW=595.28,pageH=841.89,margin=28,scale=Math.min((pageW-margin*2)/canvas.width,(pageH-margin*2)/canvas.height);
-  const drawW=canvas.width*scale,drawH=canvas.height*scale,x=(pageW-drawW)/2,y=(pageH-drawH)/2;
-  const content=`q\n${drawW.toFixed(2)} 0 0 ${drawH.toFixed(2)} ${x.toFixed(2)} ${y.toFixed(2)} cm\n/Im0 Do\nQ\n`;
-  const objs=[];
-  objs[1]=asciiBytes("<< /Type /Catalog /Pages 2 0 R >>");
-  objs[2]=asciiBytes("<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
-  objs[3]=asciiBytes(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageW} ${pageH}] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>`);
-  objs[4]=concatBytes([asciiBytes(`<< /Type /XObject /Subtype /Image /Width ${canvas.width} /Height ${canvas.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpg.length} >>\nstream\n`),jpg,asciiBytes("\nendstream")]);
-  const cb=asciiBytes(content);objs[5]=concatBytes([asciiBytes(`<< /Length ${cb.length} >>\nstream\n`),cb,asciiBytes("endstream")]);
-  const parts=[asciiBytes("%PDF-1.4\n")],offsets=[0];let offset=parts[0].length;
-  for(let i=1;i<=5;i++){offsets[i]=offset;const part=concatBytes([asciiBytes(`${i} 0 obj\n`),objs[i],asciiBytes("\nendobj\n")]);parts.push(part);offset+=part.length}
-  const xrefOffset=offset;let xref="xref\n0 6\n0000000000 65535 f \n";
-  for(let i=1;i<=5;i++)xref+=String(offsets[i]).padStart(10,"0")+" 00000 n \n";
-  xref+=`trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
-  parts.push(asciiBytes(xref));return new Blob([concatBytes(parts)],{type:"application/pdf"});
-}
-function exportPdf(){
-  const canvas=buildExportCanvas();if(!canvas)return;downloadBlob(canvasToPdfBlob(canvas),`${safeFileName(project.name)}.pdf`);toast("PDF gerado");
-}
-function saveAsCopy(){
-  if(!project)return;const name=prompt("Nome da cópia:",`${project.name} - cópia`);if(!name)return;
-  project=JSON.parse(JSON.stringify(project));project.id=uid();project.name=name.trim()||"Cópia";project.createdAt=new Date().toISOString();project.updatedAt=project.createdAt;
-  setProjectLabel();saveCurrent();renderGrid();toast("Cópia salva");
-}
-function setupLaunchQueue(){
-  if(!("launchQueue" in window))return;
-  launchQueue.setConsumer(async params=>{
-    const handle=params.files?.[0];if(handle){const file=await handle.getFile();await importJpmFile(file)}
-  });
-}
-
 
 function colorDistance(a,b){
   const dr=a[0]-b[0], dg=a[1]-b[1], db=a[2]-b[2];
@@ -293,20 +156,10 @@ function rgbToHex(r,g,b){
   return "#"+[r,g,b].map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,"0")).join("");
 }
 
-let autoBackgroundRGB=null;
 function isBackgroundPixel(r,g,b,mode){
   if(mode==="light") return r>235 && g>235 && b>235;
   if(mode==="dark") return r<25 && g<25 && b<25;
-  if(mode==="auto" && autoBackgroundRGB){
-    const dr=r-autoBackgroundRGB[0], dg=g-autoBackgroundRGB[1], db=b-autoBackgroundRGB[2];
-    return (dr*dr+dg*dg+db*db) < 3600;
-  }
   return false;
-}
-function detectBackgroundFromCorners(ctx,w,h){
-  const pts=[[1,1],[Math.max(1,w-2),1],[1,Math.max(1,h-2)],[Math.max(1,w-2),Math.max(1,h-2)]];
-  const samples=pts.map(([x,y])=>{const p=ctx.getImageData(x,y,1,1).data;return [p[0],p[1],p[2]]});
-  return [0,1,2].map(k=>Math.round(samples.reduce((s,p)=>s+p[k],0)/samples.length));
 }
 
 function buildQuantizedPalette(pixels, maxColors, bgMode){
@@ -363,9 +216,8 @@ async function generateProjectFromImage(){
     return;
   }
 
-  const rows = Math.max(4,Math.min(80,Number($("imageRowsInput").value)||30));
-  const cols = Math.max(4,Math.min(60,Number($("imageColsInput").value)||20));
-  const maxColors = Math.max(2,Number($("imageColorsInput").value)||8);
+  const cols = Number($("imageColsInput").value)||20;
+  const maxColors = Number($("imageColorsInput").value)||8;
   const bgMode = $("backgroundModeInput").value;
   const name = $("imageProjectName").value.trim() || "Brinco convertido";
 
@@ -377,9 +229,10 @@ async function generateProjectFromImage(){
   canvas.width=Math.max(1,Math.round(uploadedImage.naturalWidth*scale));
   canvas.height=Math.max(1,Math.round(uploadedImage.naturalHeight*scale));
   ctx.drawImage(uploadedImage,0,0,canvas.width,canvas.height);
-  autoBackgroundRGB = bgMode==="auto" ? detectBackgroundFromCorners(ctx,canvas.width,canvas.height) : null;
 
   const crop=cropTransparentBounds(ctx,canvas.width,canvas.height,bgMode);
+  const aspect=crop.h/crop.w;
+  const rows=Math.max(4,Math.min(80,Math.round(cols*aspect)));
 
   const sample=document.createElement("canvas");
   sample.width=cols;
@@ -511,117 +364,32 @@ function newProjectData(){
 }
 
 function renderGrid(){
-  if(tool!=="standard") closeCellColorMenu?.();
   const g = $("beadGrid");
   g.innerHTML="";
-  renderRulers();
   g.style.gridTemplateColumns=`repeat(${project.cols},28px)`;
-
   project.grid.forEach((row,r)=>{
     row.forEach((colorId,c)=>{
       const bead=document.createElement("button");
       bead.className="bead"+(colorId?"":" empty");
-      bead.dataset.r=r;
-      bead.dataset.c=c;
-      bead.type="button";
-
+      bead.dataset.r=r; bead.dataset.c=c;
       const color=project.palette.find(x=>x.id===colorId);
       if(color) bead.style.background=color.hex;
-
       bead.addEventListener("pointerdown",(e)=>{
-        if(e.pointerType==="touch" && e.isPrimary===false) return;
-        e.preventDefault();
-        e.stopPropagation();
-
-        // PADRÃO: somente este modo pode abrir o menu de cores.
-        if(tool==="standard"){
-          isPointerDown=false;
-          activePaintPointerId=null;
-          openCellColorMenu(r,c);
-          return;
-        }
-
-        // LÁPIS / CÉLULA / BORRACHA:
-        // nunca abrem menu e nunca alteram selectedColor.
-        pushHistory();
-        applyAt(r,c,false);
-
-        if(tool==="paint"){
-          isPointerDown=true;
-          activePaintPointerId=e.pointerId;
-          lastPaintCell=`${r}:${c}`;
-          try{ g.setPointerCapture?.(e.pointerId); }catch(_){}
-        }else{
-          isPointerDown=false;
-          activePaintPointerId=null;
-        }
+        e.preventDefault(); isPointerDown=true; pushHistory(); applyAt(r,c);
+        bead.setPointerCapture?.(e.pointerId);
       });
-
+      bead.addEventListener("pointerenter",()=>{
+        if(isPointerDown) applyAt(r,c,false);
+      });
+      bead.addEventListener("pointerup",()=>{isPointerDown=false});
+      bead.addEventListener("pointercancel",()=>{isPointerDown=false});
       g.appendChild(bead);
-    });
+    })
   });
-
   updateStats();
 }
-let menuCell=null;
-function openCellColorMenu(r,c){
-  menuCell={r,c};
-  const wrap=$("cellColorChoices");
-  wrap.innerHTML="";
-  project.palette.forEach(color=>{
-    const b=document.createElement("button");
-    b.className="colorSwatch"+(project.grid[r][c]===color.id?" selected":"");
-    b.style.background=color.hex;
-    b.title=`${color.name} (${color.code})`;
-    b.onclick=()=>{
-      pushHistory(); selectedColor=color.id; project.grid[r][c]=color.id;
-      if(symmetry) project.grid[r][project.cols-1-c]=color.id;
-      closeCellColorMenu(); renderPalette(); renderGrid();
-    };
-    wrap.appendChild(b);
-  });
-  $("cellColorMenu").classList.remove("hidden");
-}
-function closeCellColorMenu(){ $("cellColorMenu")?.classList.add("hidden"); menuCell=null; }
 
-const beadGridEl=$("beadGrid");
-
-beadGridEl.addEventListener("pointermove",(e)=>{
-  if(tool!=="paint" || !isPointerDown) return;
-  if(activePaintPointerId!==null && e.pointerId!==activePaintPointerId) return;
-  if(e.pointerType==="touch" && e.isPrimary===false) return;
-
-  e.preventDefault();
-
-  // Como a grade captura o ponteiro, localizamos a célula sob o dedo/caneta.
-  const hit=document.elementFromPoint(e.clientX,e.clientY);
-  const bead=hit?.closest?.(".bead");
-  if(!bead || !beadGridEl.contains(bead)) return;
-
-  const r=Number(bead.dataset.r);
-  const c=Number(bead.dataset.c);
-  if(!Number.isInteger(r) || !Number.isInteger(c)) return;
-
-  const key=`${r}:${c}`;
-  if(key===lastPaintCell) return;
-  lastPaintCell=key;
-  applyAt(r,c,false);
-},{passive:false});
-
-function finishPaintPointer(e){
-  if(activePaintPointerId!==null && e?.pointerId!=null && e.pointerId!==activePaintPointerId) return;
-  isPointerDown=false;
-  activePaintPointerId=null;
-  lastPaintCell=null;
-  try{
-    if(e?.pointerId!=null && beadGridEl.hasPointerCapture?.(e.pointerId)){
-      beadGridEl.releasePointerCapture(e.pointerId);
-    }
-  }catch(_){}
-}
-
-document.addEventListener("pointerup",finishPaintPointer);
-document.addEventListener("pointercancel",finishPaintPointer);
+document.addEventListener("pointerup",()=>isPointerDown=false);
 
 function applyAt(r,c,rerender=true){
   const value = tool==="erase" ? null : selectedColor;
@@ -654,15 +422,13 @@ function renderPalette(){
     b.className="colorSwatch"+(color.id===selectedColor?" selected":"");
     b.style.background=color.hex;
     b.title=`${color.name} (${color.code})`;
-    b.onclick=(e)=>{e.preventDefault();e.stopPropagation();selectedColor=color.id;renderPalette();};
+    b.onclick=()=>{selectedColor=color.id; tool="paint"; updateToolButtons(); renderPalette()};
     wrap.appendChild(b);
   })
 }
 
 function updateToolButtons(){
-  $("standardToolBtn")?.classList.toggle("activeTool",tool==="standard");
   $("paintToolBtn").classList.toggle("activeTool",tool==="paint");
-  $("cellToolBtn")?.classList.toggle("activeTool",tool==="cell");
   $("eraseToolBtn").classList.toggle("activeTool",tool==="erase");
   $("symmetryBtn").classList.toggle("activeTool",symmetry);
 }
@@ -773,12 +539,7 @@ $("createProjectBtn").onclick=()=>{
 $("backHomeBtn").onclick=()=>{saveCurrent(); showView("homeView"); setProjectLabel()}
 $("openProjectsBtn").onclick=()=>{renderProjects(); showView("projectsView")}
 $("projectsBackBtn").onclick=()=>showView("homeView");
-$("standardToolBtn").onclick=()=>{finishPaintPointer();tool="standard";updateToolButtons();toast("Modo padrão: toque na célula para escolher a cor")}
-$("paintToolBtn").onclick=()=>{finishPaintPointer();closeCellColorMenu();tool="paint";updateToolButtons();toast("Modo lápis: a cor selecionada permanece fixa")}
-$("cellToolBtn").onclick=()=>{finishPaintPointer();closeCellColorMenu();tool="cell";updateToolButtons();toast("Modo célula: a cor selecionada fica ativa")}
-$("closeCellColorMenu").onclick=closeCellColorMenu;
-$("cellColorMenu").addEventListener("click",e=>{if(e.target===$("cellColorMenu"))closeCellColorMenu()});
-$("clearCellFromMenu").onclick=()=>{if(!menuCell)return; const {r,c}=menuCell; pushHistory(); project.grid[r][c]=null; if(symmetry)project.grid[r][project.cols-1-c]=null; closeCellColorMenu(); renderGrid()};
+$("paintToolBtn").onclick=()=>{tool="paint";updateToolButtons()}
 $("eraseToolBtn").onclick=()=>{tool="erase";updateToolButtons()}
 $("symmetryBtn").onclick=()=>{symmetry=!symmetry;updateToolButtons();toast(symmetry?"Simetria ligada":"Simetria desligada")}
 $("undoBtn").onclick=()=>{
@@ -799,20 +560,9 @@ $("mirrorVBtn").onclick=mirrorVertical;
 $("zoomOutBtn").onclick=()=>applyZoom(zoomLevel-ZOOM_STEP);
 $("zoomInBtn").onclick=()=>applyZoom(zoomLevel+ZOOM_STEP);
 $("zoomResetBtn").onclick=()=>applyZoom(1);
-$("loomBtn").onclick=()=>{ const currentTool=tool; setLoomMode(!loomMode); tool=currentTool; updateToolButtons(); };
+$("loomBtn").onclick=()=>setLoomMode(!loomMode);
 
 $("saveBtn").onclick=saveCurrent;
-$("saveAsBtn").onclick=saveAsCopy;
-$("rotateBtn").onclick=rotate90;
-$("exportJpegBtn").onclick=exportJpeg;
-$("exportPdfBtn").onclick=exportPdf;
-$("shareProjectBtn").onclick=shareJpm;
-$("quickJpmBtn").onclick=()=>exportJpm(true);
-$("quickJpegBtn").onclick=exportJpeg;
-$("quickPdfBtn").onclick=exportPdf;
-$("quickShareBtn").onclick=shareJpm;
-$("importProjectBtn").onclick=()=>$("projectFileInput").click();
-$("projectFileInput").onchange=async(e)=>{const file=e.target.files?.[0];if(file)await importJpmFile(file);e.target.value=""};
 $("addColorBtn").onclick=()=>{
   if(!project)return;
   const name=prompt("Nome da cor:","Nova cor"); if(!name)return;
@@ -838,4 +588,3 @@ if("serviceWorker" in navigator){
 applyTheme(loadTheme());
 updateLastProject();
 setProjectLabel();
-setupLaunchQueue();

@@ -38,8 +38,6 @@
           <button id="newProjectBtn" class="primary big">＋ Criar novo diagrama</button>
           <button id="imageProjectBtn" class="secondary big">🖼️ Imagem → Diagrama</button>
           <button id="openProjectsBtn" class="secondary big">📁 Meus projetos</button>
-          <button id="importProjectBtn" class="secondary big">📥 Importar projeto .JPM</button>
-          <input id="projectFileInput" type="file" accept=".jpm,application/json,application/x-jpmicangas" class="hidden" />
         </div>
 
         <div class="card">
@@ -103,9 +101,7 @@
       <section id="editorView" class="view editorView">
         <div class="toolbar card">
           <button id="backHomeBtn" title="Início">⌂</button>
-          <button id="standardToolBtn" class="editModeBtn" title="Padrão: toque na célula e escolha a cor">◉ <span>Padrão</span></button>
-          <button id="paintToolBtn" class="editModeBtn activeTool" title="Lápis: pinte e arraste">✏️ <span>Lápis</span></button>
-          <button id="cellToolBtn" class="editModeBtn" title="Célula: aplica a cor selecionada a cada toque">▦ <span>Célula</span></button>
+          <button id="paintToolBtn" class="activeTool" title="Pincel">✏️</button>
           <button id="eraseToolBtn" title="Borracha">🧽</button>
           <button id="undoBtn" title="Desfazer">↶</button>
           <button id="redoBtn" title="Refazer">↷</button>
@@ -116,14 +112,9 @@
           <button id="zoomResetBtn" title="Zoom atual">100%</button>
           <button id="zoomInBtn" title="Aumentar zoom">＋</button>
           <button id="loomBtn" title="Visualização de tear">🧵</button>
-          <button id="rotateBtn" title="Girar 90°">⟳</button>
           <button id="bgQuickBtn" title="Mudar fundo">🎨</button>
           <button id="clearBtn" title="Limpar">🗑</button>
           <button id="saveBtn" class="saveTool" title="Salvar">💾</button>
-          <button id="saveAsBtn" title="Salvar como">📝</button>
-          <button id="exportJpegBtn" title="Salvar JPEG">JPG</button>
-          <button id="exportPdfBtn" title="Salvar PDF">PDF</button>
-          <button id="shareProjectBtn" title="Compartilhar projeto .JPM">↗</button>
         </div>
 
         <div class="canvasCard card">
@@ -131,19 +122,8 @@
             <span id="viewModeLabel">Modo: Grade</span>
             <span id="zoomLabel">Zoom 100%</span>
           </div>
-          <div class="fileActions">
-            <button id="quickJpmBtn" class="secondary">Projeto .JPM</button>
-            <button id="quickJpegBtn" class="secondary">JPEG</button>
-            <button id="quickPdfBtn" class="secondary">PDF</button>
-            <button id="quickShareBtn" class="secondary">Compartilhar</button>
-          </div>
           <div id="gridViewport">
-            <div id="gridStage">
-              <div class="rulerCorner" aria-hidden="true"></div>
-              <div id="columnRuler" class="columnRuler" aria-label="Colunas"></div>
-              <div id="rowRuler" class="rowRuler" aria-label="Linhas"></div>
-              <div id="beadGrid" aria-label="Grade de miçangas"></div>
-            </div>
+            <div id="beadGrid" aria-label="Grade de miçangas"></div>
           </div>
         </div>
 
@@ -167,13 +147,6 @@
           </div>
           <div id="materialsList" class="materialsList"></div>
         </div>
-        <div id="cellColorMenu" class="cellColorMenu hidden" role="dialog" aria-modal="true" aria-label="Escolher cor">
-          <div class="cellColorPanel">
-            <div class="cellColorHead"><strong>Escolha a cor da célula</strong><button id="closeCellColorMenu" title="Fechar">✕</button></div>
-            <div id="cellColorChoices" class="cellColorChoices"></div>
-            <button id="clearCellFromMenu" class="secondary">Deixar célula vazia</button>
-          </div>
-        </div>
       </section>
 
 
@@ -191,34 +164,35 @@
           </div>
 
           <div class="grid2">
-            <label>Linhas do diagrama
-              <input id="imageRowsInput" type="number" min="4" max="80" value="30" inputmode="numeric" />
+            <label>Largura do diagrama
+              <select id="imageColsInput">
+                <option value="12">12 colunas</option>
+                <option value="16">16 colunas</option>
+                <option value="20" selected>20 colunas</option>
+                <option value="24">24 colunas</option>
+                <option value="28">28 colunas</option>
+                <option value="32">32 colunas</option>
+                <option value="40">40 colunas</option>
+              </select>
             </label>
 
-            <label>Colunas do diagrama
-              <input id="imageColsInput" type="number" min="4" max="60" value="20" inputmode="numeric" />
+            <label>Quantidade de cores
+              <select id="imageColorsInput">
+                <option value="4">4 cores</option>
+                <option value="6">6 cores</option>
+                <option value="8" selected>8 cores</option>
+                <option value="12">12 cores</option>
+                <option value="16">16 cores</option>
+                <option value="24">24 cores</option>
+              </select>
             </label>
           </div>
-
-          <label>Quantidade de cores
-            <select id="imageColorsInput">
-              <option value="2">2 cores</option>
-              <option value="3">3 cores</option>
-              <option value="4">4 cores</option>
-              <option value="6">6 cores</option>
-              <option value="8" selected>8 cores</option>
-              <option value="12">12 cores</option>
-              <option value="16">16 cores</option>
-              <option value="24">24 cores</option>
-            </select>
-          </label>
 
           <label>Fundo da imagem
             <select id="backgroundModeInput">
               <option value="none">Não remover</option>
               <option value="light" selected>Ignorar fundo claro</option>
               <option value="dark">Ignorar fundo escuro</option>
-              <option value="auto">Ignorar fundo da imagem (automático)</option>
             </select>
           </label>
 

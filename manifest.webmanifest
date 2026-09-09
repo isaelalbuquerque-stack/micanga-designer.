@@ -20,26 +20,5 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
-  ],
-  "id": "./",
-  "scope": "./",
-  "lang": "pt-BR",
-  "categories": [
-    "design",
-    "productivity",
-    "utilities"
-  ],
-  "launch_handler": {
-    "client_mode": "navigate-existing"
-  },
-  "file_handlers": [
-    {
-      "action": "./?open=jpm",
-      "accept": {
-        "application/x-jpmicangas": [
-          ".jpm"
-        ]
-      }
-    }
   ]
 }
