@@ -1,6 +1,6 @@
 
 const $ = (id)=>document.getElementById(id);
-const views = ["homeView","newProjectView","imageProjectView","editorView","projectsView"];
+const views = ["homeView","newProjectView","imageProjectView","templatesView","editorView","projectsView"];
 const STORAGE_KEY = "micangaDesignerProjects_v1";
 const ACTIVE_KEY = "micangaDesignerActive_v1";
 
@@ -72,6 +72,79 @@ let pinchStartZoom = 1;
 let panStart = null;
 let loomMode = false;
 let uploadedImage = null;
+
+
+const READY_TEMPLATES = [
+  {id:"flag_br",name:"Bandeira do Brasil",category:"Bandeiras",type:"Pulseira",technique:"Tear",rows:10,cols:10,pattern:[
+    "GGGGGGGGGG","GGGGYYGGGG","GGYYYYYYGG","GYYYBBYYYG","YYYBBBBYYY","YYYBBBBYYY","GYYYBBYYYG","GGYYYYYYGG","GGGGYYGGGG","GGGGGGGGGG"], map:{G:"c6",Y:"c5",B:"c4"}},
+  {id:"flag_ar",name:"Bandeira da Argentina",category:"Bandeiras",type:"Pulseira",technique:"Tear",rows:9,cols:12,pattern:[
+    "BBBBBBBBBBBB","BBBBBBBBBBBB","BBBBBBBBBBBB","WWWWWWWWWWWW","WWWWWYYWWWWW","WWWWWWWWWWWW","BBBBBBBBBBBB","BBBBBBBBBBBB","BBBBBBBBBBBB"], map:{B:"c13",W:"c2",Y:"c5"}},
+  {id:"flag_pt",name:"Bandeira de Portugal",category:"Bandeiras",type:"Pulseira",technique:"Tear",rows:10,cols:12,pattern:[
+    "GGGGGRRRRRRR","GGGGGRRRRRRR","GGGGGRRRRRRR","GGGYYRRRRRRR","GGYYYYRRRRRR","GGYYYYRRRRRR","GGGYYRRRRRRR","GGGGGRRRRRRR","GGGGGRRRRRRR","GGGGGRRRRRRR"], map:{G:"c16",R:"c3",Y:"c5"}},
+  {id:"flag_fr",name:"Bandeira da França",category:"Bandeiras",type:"Pulseira",technique:"Tear",rows:10,cols:12,pattern:Array(10).fill("BBBBWWWWRRRR"),map:{B:"c37",W:"c2",R:"c3"}},
+  {id:"flag_it",name:"Bandeira da Itália",category:"Bandeiras",type:"Pulseira",technique:"Tear",rows:10,cols:12,pattern:Array(10).fill("GGGGWWWWRRRR"),map:{G:"c6",W:"c2",R:"c3"}},
+
+  {id:"team_fla",name:"Flamengo — vermelho e preto",category:"Futebol",type:"Pulseira",technique:"Tear",rows:10,cols:12,pattern:[
+    "RRRRRRRRRRRR","KKKKKKKKKKKK","RRRRRRRRRRRR","KKKKKKKKKKKK","RRRRRRRRRRRR","KKKKKKKKKKKK","RRRRRRRRRRRR","KKKKKKKKKKKK","RRRRRRRRRRRR","KKKKKKKKKKKK"],map:{R:"c3",K:"c1"}},
+  {id:"team_cor",name:"Corinthians — preto e branco",category:"Futebol",type:"Pulseira",technique:"Tear",rows:10,cols:12,pattern:[
+    "WWWWWWWWWWWW","WWKKKKKKKKWW","WKKWWWWWWKKW","WKKWKKKKWKKW","WKKWKKKKWKKW","WKKWKKKKWKKW","WKKWKKKKWKKW","WKKWWWWWWKKW","WWKKKKKKKKWW","WWWWWWWWWWWW"],map:{W:"c2",K:"c1"}},
+  {id:"team_pal",name:"Palmeiras — verde e branco",category:"Futebol",type:"Brinco",technique:"Brick Stitch",rows:10,cols:10,pattern:[
+    "GGGGGGGGGG","GGWWWWWWGG","GWWGGGGWWG","GWGGWWGGWG","GWGWWWWGWG","GWGWWWWGWG","GWGGWWGGWG","GWWGGGGWWG","GGWWWWWWGG","GGGGGGGGGG"],map:{G:"c16",W:"c2"}},
+  {id:"team_sp",name:"São Paulo — branco, vermelho e preto",category:"Futebol",type:"Brinco",technique:"Brick Stitch",rows:10,cols:10,pattern:[
+    "WWWWWWWWWW","WWWWWWWWWW","RRRRRRRRRR","KKKKKKKKKK","WWWWWWWWWW","WWWWWWWWWW","KKKKKKKKKK","RRRRRRRRRR","WWWWWWWWWW","WWWWWWWWWW"],map:{W:"c2",R:"c3",K:"c1"}},
+  {id:"team_vasco",name:"Vasco — preto, branco e vermelho",category:"Futebol",type:"Cordão",technique:"Tear",rows:10,cols:12,pattern:[
+    "KKKKKKKKKKWW","KKKKKKKKKWWK","KKKKKKKKWWKK","KKKKKKKWWKKK","KKKKRRWWKKKK","KKKKWWRRKKKK","KKKWWKKKKKKK","KKWWKKKKKKKK","KWWKKKKKKKKK","WWKKKKKKKKKK"],map:{K:"c1",W:"c2",R:"c3"}},
+  {id:"team_pay",name:"Paysandu — azul e branco",category:"Futebol",type:"Pulseira",technique:"Tear",rows:10,cols:12,pattern:[
+    "BBBBBBBBBBBB","WWWWWWWWWWWW","BBBBBBBBBBBB","WWWWWWWWWWWW","BBBBBBBBBBBB","WWWWWWWWWWWW","BBBBBBBBBBBB","WWWWWWWWWWWW","BBBBBBBBBBBB","WWWWWWWWWWWW"],map:{B:"c37",W:"c2"}},
+  {id:"team_rem",name:"Remo — azul marinho e branco",category:"Futebol",type:"Pulseira",technique:"Tear",rows:10,cols:12,pattern:[
+    "NNNNNNNNNNNN","NNWWWWWWWWNN","NWWNNNNNNWWN","NWNNWWWWNNWN","NWNNWWWWNNWN","NWNNWWWWNNWN","NWNNWWWWNNWN","NWWNNNNNNWWN","NNWWWWWWWWNN","NNNNNNNNNNNN"],map:{N:"c14",W:"c2"}},
+
+  {id:"ear_geo1",name:"Brinco losango clássico",category:"Brincos",type:"Brinco",technique:"Brick Stitch",rows:12,cols:9,pattern:[
+    "....M....","...MMM...","..MYYYM..",".MYYYMMY.","MYYMMYYYM",".MYYYMMY.","..MYYYM..","...MMM...","....M....","....M....","...M.M...","..M...M.."],map:{M:"c23",Y:"c5"}},
+  {id:"ear_geo2",name:"Brinco tribal geométrico",category:"Brincos",type:"Brinco",technique:"Tear",rows:12,cols:10,pattern:[
+    "....KK....","...KTTK...","..KTTTTK..",".KTTKKTTK.","KTTKYYKTTK","KTTKYYKTTK",".KTTKKTTK.","..KTTTTK..","...KTTK...","....KK....","...K..K...","..K....K.."],map:{K:"c1",T:"c12",Y:"c5"}},
+  {id:"brace_geo",name:"Pulseira chevron",category:"Pulseiras",type:"Pulseira",technique:"Tear",rows:8,cols:16,pattern:[
+    "RR..RR..RR..RR..",".RR..RR..RR..RR.","..RR..RR..RR..RR","...RR..RR..RR..R","...BB..BB..BB..B","..BB..BB..BB..BB",".BB..BB..BB..BB.","BB..BB..BB..BB.."],map:{R:"c3",B:"c37"}},
+  {id:"neck_geo",name:"Cordão geométrico central",category:"Cordões",type:"Cordão",technique:"Tear",rows:9,cols:18,pattern:[
+    "........YY........",".......YGGY.......","......YGGGGY......",".....YGGKKGGY.....","....YGGKKKKGGY....",".....YGGKKGGY.....","......YGGGGY......",".......YGGY.......","........YY........"],map:{Y:"c7",G:"c41",K:"c1"}}
+];
+
+function templateToProject(t){
+  const grid=t.pattern.map(row=>Array.from(row).map(ch=>ch==='.'?null:(t.map[ch]||null)));
+  return ensurePalette({
+    id:uid(),name:t.name,rows:t.rows,cols:t.cols,beadSize:3,technique:t.technique,
+    palette:JSON.parse(JSON.stringify(defaultPalette)),grid,
+    createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),templateType:t.type
+  });
+}
+
+function renderTemplatePreview(t,host){
+  host.innerHTML='';
+  host.style.gridTemplateColumns=`repeat(${t.cols},1fr)`;
+  t.pattern.forEach(row=>Array.from(row).forEach(ch=>{
+    const d=document.createElement('span'); d.className='templateBead'+(ch==='.'?' templateEmpty':'');
+    if(ch!=='.'){
+      const id=t.map[ch], color=defaultPalette.find(c=>c.id===id);
+      if(color) d.style.background=color.hex;
+    }
+    host.appendChild(d);
+  }));
+}
+
+function renderTemplates(category='Todos'){
+  const wrap=$('templatesList'); if(!wrap) return;
+  wrap.innerHTML='';
+  READY_TEMPLATES.filter(t=>category==='Todos'||t.category===category).forEach(t=>{
+    const card=document.createElement('article'); card.className='templateItem';
+    const preview=document.createElement('div'); preview.className='templatePreview';
+    renderTemplatePreview(t,preview);
+    const body=document.createElement('div'); body.className='templateBody';
+    body.innerHTML=`<div class="templateBadges"><span>${t.category}</span><span>${t.type}</span></div><h3>${escapeHtml(t.name)}</h3><p>${t.rows}×${t.cols} · ${escapeHtml(t.technique)}</p>`;
+    const btn=document.createElement('button'); btn.className='primary templateUse'; btn.textContent='Usar modelo';
+    btn.onclick=()=>{project=templateToProject(t);openProject(project);toast('Modelo carregado: '+t.name)};
+    body.appendChild(btn); card.append(preview,body); wrap.appendChild(card);
+  });
+}
 
 
 function ensurePalette(p){
@@ -902,6 +975,9 @@ $("bgQuickBtn").onclick=()=>{
 
 $("newProjectBtn").onclick=()=>showView("newProjectView");
 $("imageProjectBtn").onclick=()=>showView("imageProjectView");
+$("templatesBtn").onclick=()=>{renderTemplates("Todos");showView("templatesView")};
+$("templatesBackBtn").onclick=()=>showView("homeView");
+document.querySelectorAll(".templateFilter").forEach(btn=>btn.onclick=()=>{document.querySelectorAll(".templateFilter").forEach(b=>b.classList.remove("active"));btn.classList.add("active");renderTemplates(btn.dataset.cat)});
 $("cancelImageBtn").onclick=()=>showView("homeView");
 function loadImageFromInput(input){
   const file=input.files?.[0];

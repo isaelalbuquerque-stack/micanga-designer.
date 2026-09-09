@@ -737,3 +737,18 @@ button{transition:transform .12s ease,box-shadow .18s ease,filter .18s ease}
 @media(max-width:420px){
   .imageSourceBtns button{font-size:.86rem;padding:8px 6px}
 }
+
+/* V5.13 — Biblioteca de modelos prontos */
+.templateFilters{display:flex;gap:7px;overflow-x:auto;padding:12px 0 4px;scrollbar-width:thin}
+.templateFilter{white-space:nowrap;padding:9px 11px;background:var(--lilac-soft2);color:var(--primary-dark);font-size:.82rem;font-weight:750}
+.templateFilter.active{background:var(--primary);color:#fff}
+.templatesList{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
+.templateItem{border:1px solid var(--border);border-radius:16px;overflow:hidden;background:#fff;display:flex;flex-direction:column;min-width:0}
+.templatePreview{display:grid;gap:1px;aspect-ratio:1.3/1;padding:9px;background:#f7f2fb;align-content:center;justify-content:center;grid-auto-rows:minmax(5px,11px)}
+.templateBead{display:block;width:clamp(5px,2vw,10px);height:clamp(5px,2vw,10px);border-radius:50%;box-shadow:inset 0 1px 2px rgba(255,255,255,.55),0 1px 1px rgba(0,0,0,.18)}
+.templateEmpty{background:transparent!important;box-shadow:none;border:1px dashed rgba(91,58,120,.13)}
+.templateBody{padding:10px;display:flex;flex-direction:column;gap:6px;flex:1}
+.templateBody h3{font-size:.9rem;line-height:1.15;margin:0}.templateBody p{font-size:.75rem;color:var(--muted);margin:0}
+.templateBadges{display:flex;gap:5px;flex-wrap:wrap}.templateBadges span{font-size:.62rem;background:var(--lilac-soft);color:var(--primary-dark);padding:3px 6px;border-radius:999px;font-weight:800}
+.templateUse{margin-top:auto;padding:8px 9px;font-size:.78rem;border-radius:10px}
+@media(min-width:650px){.templatesList{grid-template-columns:repeat(3,minmax(0,1fr))}}

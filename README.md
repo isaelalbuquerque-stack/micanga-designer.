@@ -199,3 +199,11 @@ A associação direta do arquivo `.jpm` depende do suporte do navegador/sistema 
 ## V5.12 — Câmera e galeria
 - Na tela Imagem → Diagrama, o usuário pode escolher entre abrir a câmera traseira ou selecionar uma imagem local da galeria/arquivos.
 - Mantido o processamento aprimorado da V5.11.
+
+
+## V5.13 — Biblioteca de modelos prontos
+- Novo botão 📚 Modelos prontos na tela inicial.
+- Galeria visual com miniaturas reais dos diagramas.
+- Categorias: Bandeiras, Futebol, Brincos, Pulseiras e Cordões.
+- Modelos iniciais incluem Brasil, Argentina, Portugal, França e Itália; padrões inspirados nas cores de Flamengo, Corinthians, Palmeiras, São Paulo, Vasco, Paysandu e Remo; além de modelos geométricos de brinco, pulseira e cordão.
+- Cada modelo abre diretamente no editor e pode ser recolorido, alterado e salvo como novo projeto.

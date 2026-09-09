@@ -37,6 +37,7 @@
         <div class="homeActions">
           <button id="newProjectBtn" class="primary big">＋ Criar novo diagrama</button>
           <button id="imageProjectBtn" class="secondary big">🖼️ Imagem → Diagrama</button>
+          <button id="templatesBtn" class="secondary big">📚 Modelos prontos</button>
           <button id="openProjectsBtn" class="secondary big">📁 Meus projetos</button>
           <button id="importProjectBtn" class="secondary big">📥 Importar projeto .JPM</button>
           <input id="projectFileInput" type="file" accept=".jpm,application/json,application/x-jpmicangas" class="hidden" />
@@ -239,6 +240,25 @@
           </div>
 
           <canvas id="imageProcessCanvas" class="hidden"></canvas>
+        </div>
+      </section>
+
+
+      <section id="templatesView" class="view">
+        <div class="card templatesCard">
+          <div class="projectsHead">
+            <button id="templatesBackBtn" class="secondary">← Voltar</button>
+            <h2>Modelos prontos</h2>
+          </div>
+          <div class="templateFilters" id="templateFilters">
+            <button class="templateFilter active" data-cat="Todos">Todos</button>
+            <button class="templateFilter" data-cat="Bandeiras">🌎 Bandeiras</button>
+            <button class="templateFilter" data-cat="Futebol">⚽ Futebol</button>
+            <button class="templateFilter" data-cat="Brincos">💎 Brincos</button>
+            <button class="templateFilter" data-cat="Pulseiras">📿 Pulseiras</button>
+            <button class="templateFilter" data-cat="Cordões">🧿 Cordões</button>
+          </div>
+          <div id="templatesList" class="templatesList"></div>
         </div>
       </section>
 
