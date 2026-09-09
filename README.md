@@ -116,3 +116,18 @@ A associação direta do arquivo `.jpm` depende do suporte do navegador/sistema 
 - A tabela/grade fica logo abaixo da paleta.
 - Menus e botões foram compactados para aproveitar melhor a altura da tela no celular.
 - Estrutura da grade, réguas e modo Tear da V5 foram preservados.
+
+
+## V5.2 — troca de cor por célula
+- Célula em branco: recebe diretamente a cor selecionada na barra de paleta.
+- Célula já preenchida: não é sobrescrita imediatamente.
+- Ao tocar em uma célula colorida, aparece “Escolha nova cor” e abre a tabela de cores do próprio projeto.
+- A nova cor escolhida também passa a ser a cor selecionada na paleta.
+
+
+## V5.3 — barras organizadas
+- Removidos da barra principal os comandos duplicados de salvar/exportar/compartilhar.
+- A primeira barra fica dedicada às ferramentas de edição e visualização.
+- A paleta de cores continua imediatamente abaixo da primeira barra.
+- A barra de arquivo acima da tabela agora contém: Salvar, JPM, JPG, PDF e Compartilhar.
+- Mantida a troca de cor por célula da V5.2.

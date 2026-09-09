@@ -118,11 +118,6 @@
           <button id="rotateBtn" title="Girar 90°">⟳</button>
           <button id="bgQuickBtn" title="Mudar fundo">🎨</button>
           <button id="clearBtn" title="Limpar">🗑</button>
-          <button id="saveBtn" class="saveTool" title="Salvar">💾</button>
-          <button id="saveAsBtn" title="Salvar como">📝</button>
-          <button id="exportJpegBtn" title="Salvar JPEG">JPG</button>
-          <button id="exportPdfBtn" title="Salvar PDF">PDF</button>
-          <button id="shareProjectBtn" title="Compartilhar projeto .JPM">↗</button>
         </div>
 
         <div id="editorPaletteBar" class="editorPaletteBar card">
@@ -138,11 +133,12 @@
             <span id="viewModeLabel">Modo: Grade</span>
             <span id="zoomLabel">Zoom 100%</span>
           </div>
-          <div class="fileActions">
-            <button id="quickJpmBtn" class="secondary">Projeto .JPM</button>
-            <button id="quickJpegBtn" class="secondary">JPEG</button>
+          <div class="fileActions" aria-label="Arquivo e exportação">
+            <button id="saveBtn" class="saveTool">💾 Salvar</button>
+            <button id="quickJpmBtn" class="secondary">📁 JPM</button>
+            <button id="quickJpegBtn" class="secondary">JPG</button>
             <button id="quickPdfBtn" class="secondary">PDF</button>
-            <button id="quickShareBtn" class="secondary">Compartilhar</button>
+            <button id="quickShareBtn" class="secondary">↗ Compartilhar</button>
           </div>
           <div id="gridViewport">
             <div id="gridStage">
@@ -239,6 +235,17 @@
       </section>
     </main>
 
+
+
+    <div id="replaceColorPicker" class="replaceColorPicker hidden" role="dialog" aria-modal="true" aria-label="Escolha nova cor">
+      <div class="replaceColorPanel">
+        <div class="replaceColorHead">
+          <strong>Escolha nova cor</strong>
+          <button id="closeReplaceColorBtn" type="button" title="Fechar">✕</button>
+        </div>
+        <div id="replaceColorList" class="replaceColorList"></div>
+      </div>
+    </div>
     <div id="toast" class="toast"></div>
   </div>
   <script src="app.js"></script>

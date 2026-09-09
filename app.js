@@ -500,6 +500,47 @@ function newProjectData(){
   });
 }
 
+
+function closeReplaceColorPicker(){
+  const modal=$("replaceColorPicker");
+  if(modal) modal.classList.add("hidden");
+}
+
+function openReplaceColorPicker(r,c){
+  const modal=$("replaceColorPicker");
+  const list=$("replaceColorList");
+  if(!modal||!list||!project) return;
+
+  list.innerHTML="";
+  project.palette.forEach(color=>{
+    const btn=document.createElement("button");
+    btn.type="button";
+    btn.className="replaceColorSwatch";
+    btn.style.background=color.hex;
+    btn.title=`${color.name} (${color.code})`;
+    btn.setAttribute("aria-label",`Escolher ${color.name}`);
+    if(project.grid[r][c]===color.id) btn.classList.add("currentColor");
+
+    btn.onclick=(e)=>{
+      e.preventDefault();
+      e.stopPropagation();
+      pushHistory();
+      project.grid[r][c]=color.id;
+      selectedColor=color.id;
+      closeReplaceColorPicker();
+      renderPalette();
+      renderGrid();
+      toast(`Nova cor: ${color.name}`);
+    };
+    list.appendChild(btn);
+  });
+
+  modal.dataset.row=String(r);
+  modal.dataset.col=String(c);
+  modal.classList.remove("hidden");
+  toast("Escolha nova cor");
+}
+
 function renderGrid(){
   const g = $("beadGrid");
   g.innerHTML="";
@@ -513,7 +554,20 @@ function renderGrid(){
       const color=project.palette.find(x=>x.id===colorId);
       if(color) bead.style.background=color.hex;
       bead.addEventListener("pointerdown",(e)=>{
-        e.preventDefault(); isPointerDown=true; pushHistory(); applyAt(r,c);
+        e.preventDefault();
+
+        // Célula já colorida: não sobrescreve direto.
+        // Pede uma nova cor usando a mesma paleta do projeto.
+        if(project.grid[r][c]){
+          isPointerDown=false;
+          openReplaceColorPicker(r,c);
+          return;
+        }
+
+        // Célula em branco: aplica imediatamente a cor selecionada.
+        isPointerDown=true;
+        pushHistory();
+        applyAt(r,c);
         bead.setPointerCapture?.(e.pointerId);
       });
       bead.addEventListener("pointerenter",()=>{
@@ -685,6 +739,10 @@ $("paletteBtn").onclick=()=>{
   $("paletteBtn").classList.toggle("activeTool",!hidden);
   $("paletteBtn").title=hidden?"Mostrar paleta":"Ocultar paleta";
 }
+$("closeReplaceColorBtn").onclick=closeReplaceColorPicker;
+$("replaceColorPicker").addEventListener("click",(e)=>{
+  if(e.target===$("replaceColorPicker")) closeReplaceColorPicker();
+});
 $("openProjectsBtn").onclick=()=>{renderProjects(); showView("projectsView")}
 $("projectsBackBtn").onclick=()=>showView("homeView");
 $("paintToolBtn").onclick=()=>{tool="paint";updateToolButtons()}
@@ -711,11 +769,11 @@ $("zoomResetBtn").onclick=()=>applyZoom(1);
 $("loomBtn").onclick=()=>setLoomMode(!loomMode);
 
 $("saveBtn").onclick=saveCurrent;
-$("saveAsBtn").onclick=saveAsCopy;
+
 $("rotateBtn").onclick=rotate90;
-$("exportJpegBtn").onclick=exportJpeg;
-$("exportPdfBtn").onclick=exportPdf;
-$("shareProjectBtn").onclick=shareJpm;
+
+
+
 $("quickJpmBtn").onclick=()=>exportJpm(true);
 $("quickJpegBtn").onclick=exportJpeg;
 $("quickPdfBtn").onclick=exportPdf;

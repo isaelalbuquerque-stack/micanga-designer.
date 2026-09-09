@@ -292,3 +292,100 @@ button{transition:transform .12s ease,box-shadow .18s ease,filter .18s ease}
   }
   .editorPaletteBar .paletteColors{min-height:44px}
 }
+
+
+/* V5.2 — escolha de nova cor em célula já preenchida */
+.replaceColorPicker{
+  position:fixed;
+  inset:0;
+  z-index:120;
+  display:flex;
+  align-items:flex-end;
+  justify-content:center;
+  background:rgba(35,20,50,.24);
+  padding:12px;
+}
+.replaceColorPanel{
+  width:min(100%,620px);
+  max-height:46vh;
+  overflow:hidden;
+  background:#fff;
+  border:1px solid var(--border);
+  border-radius:18px;
+  box-shadow:0 -8px 30px rgba(70,35,100,.18);
+  padding:10px;
+}
+.replaceColorHead{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  color:var(--primary-dark);
+  margin-bottom:7px;
+}
+.replaceColorHead button{
+  width:36px;
+  height:36px;
+  padding:0;
+  border-radius:10px;
+  background:var(--lilac-soft);
+  color:var(--primary-dark);
+}
+.replaceColorList{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(38px,1fr));
+  gap:8px;
+  overflow-y:auto;
+  max-height:34vh;
+  padding:4px;
+}
+.replaceColorSwatch{
+  width:38px;
+  height:38px;
+  min-width:38px;
+  padding:0;
+  justify-self:center;
+  border-radius:50%;
+  border:3px solid #fff;
+  box-shadow:0 0 0 1px var(--border);
+}
+.replaceColorSwatch.currentColor{
+  box-shadow:0 0 0 3px var(--primary);
+}
+
+
+/* V5.3 — barra principal só com ferramentas; arquivo sem duplicação */
+.toolbar{
+  grid-template-columns:repeat(16,minmax(42px,1fr));
+}
+.fileActions{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  overflow-x:auto;
+  padding:0 0 6px;
+  scrollbar-width:thin;
+}
+.fileActions button{
+  height:36px;
+  min-width:max-content;
+  white-space:nowrap;
+  padding:6px 10px;
+  font-size:.73rem;
+  border-radius:10px;
+}
+.fileActions .saveTool{
+  background:linear-gradient(135deg,var(--primary),var(--primary2));
+  color:#fff;
+  box-shadow:0 4px 10px rgba(139,92,246,.18);
+}
+@media(max-width:520px){
+  .toolbar{
+    grid-template-columns:repeat(16,40px);
+  }
+  .fileActions button{
+    height:34px;
+    padding:5px 9px;
+    font-size:.7rem;
+  }
+}
