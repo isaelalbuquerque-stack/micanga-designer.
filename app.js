@@ -62,6 +62,9 @@ let symmetry = false;
 let undoStack = [];
 let redoStack = [];
 let selectedRows = new Set();
+let selectedCols = new Set();
+let areaSelection = null;
+let areaAnchor = null;
 let isPointerDown = false;
 let deferredPrompt = null;
 let zoomLevel = 1;
@@ -341,7 +344,11 @@ function renderRulers(){
   cols.style.gridTemplateColumns=`repeat(${project.cols},28px)`;
   rows.style.gridTemplateRows=`repeat(${project.rows},28px)`;
   for(let c=0;c<project.cols;c++){
-    const el=document.createElement("div"); el.className="rulerCell"; el.textContent=columnLabel(c); cols.appendChild(el);
+    const el=document.createElement("button"); el.type="button";
+    el.className="rulerCell colSelectCell"+(selectedCols.has(c)?" selectedColRuler":"");
+    el.textContent=columnLabel(c); el.title=`Selecionar coluna ${columnLabel(c)}`;
+    el.setAttribute("aria-pressed",selectedCols.has(c)?"true":"false");
+    el.onclick=(e)=>{e.preventDefault();e.stopPropagation();toggleColSelection(c)}; cols.appendChild(el);
   }
   for(let r=0;r<project.rows;r++){
     const el=document.createElement("button");
@@ -354,6 +361,7 @@ function renderRulers(){
     rows.appendChild(el);
   }
   updateRowSelectionBar();
+  updateColSelectionBar();
 }
 // V5.19 — seleção de múltiplas linhas pela régua + preenchimento estilo Excel.
 function toggleRowSelection(r){
@@ -415,6 +423,48 @@ function copySelectedRows(direction){
   saveCurrent();
   toast(`Linhas copiadas para ${direction==="down"?"baixo":"cima"}`);
 }
+
+// V5.20 — colunas, seleção de área e edição avançada.
+function toggleColSelection(c){
+  if(!project||c<0||c>=project.cols)return;
+  if(selectedCols.has(c)) selectedCols.delete(c); else selectedCols.add(c);
+  renderGrid();
+}
+function clearColSelection(){selectedCols.clear();renderGrid()}
+function updateColSelectionBar(){
+  const bar=$("colSelectionBar"),count=$("colSelectionCount"); if(!bar||!count)return;
+  const n=selectedCols.size; count.textContent=n?`${n} coluna${n>1?"s":""}`:"Nenhuma coluna"; bar.classList.toggle("active",n>0);
+  ["copyColsLeftBtn","copyColsRightBtn","deleteColsBtn"].forEach(id=>{if($(id))$(id).disabled=!n});
+}
+function colRepeatCount(){return Math.max(1,Math.min(99,Number($("colCopyRepeat")?.value)||1))}
+function copySelectedCols(direction){
+  if(!project||!selectedCols.size)return; const inds=[...selectedCols].sort((a,b)=>a-b); const reps=colRepeatCount();
+  const pattern=inds.map(c=>project.grid.map(row=>row[c])); const block=[]; for(let k=0;k<reps;k++) pattern.forEach(col=>block.push(col.slice()));
+  pushHistory(); let start;
+  if(direction==="right"){
+    start=inds.at(-1)+1; while(project.cols<start+block.length){project.grid.forEach(r=>r.push(null));project.cols++}
+  }else{
+    const missing=Math.max(0,block.length-inds[0]); for(let k=0;k<missing;k++){project.grid.forEach(r=>r.unshift(null));project.cols++}
+    start=inds[0]+missing-block.length;
+  }
+  block.forEach((col,j)=>col.forEach((v,r)=>project.grid[r][start+j]=v)); selectedCols=new Set(block.map((_,j)=>start+j)); renderGrid();saveCurrent();toast(`Colunas copiadas para ${direction==="right"?"direita":"esquerda"}`)
+}
+function insertRow(where){if(!project)return;pushHistory();const inds=[...selectedRows].sort((a,b)=>a-b);let at=inds.length?(where==="above"?inds[0]:inds.at(-1)+1):project.rows;project.grid.splice(at,0,Array(project.cols).fill(null));project.rows++;selectedRows=new Set([at]);renderGrid();saveCurrent()}
+function deleteSelectedRows(){if(!selectedRows.size||project.rows-selectedRows.size<1)return;pushHistory();project.grid=project.grid.filter((_,r)=>!selectedRows.has(r));project.rows=project.grid.length;selectedRows.clear();renderGrid();saveCurrent()}
+function insertCol(where){if(!project)return;pushHistory();const inds=[...selectedCols].sort((a,b)=>a-b);let at=inds.length?(where==="left"?inds[0]:inds.at(-1)+1):project.cols;project.grid.forEach(r=>r.splice(at,0,null));project.cols++;selectedCols=new Set([at]);renderGrid();saveCurrent()}
+function deleteSelectedCols(){if(!selectedCols.size||project.cols-selectedCols.size<1)return;pushHistory();project.grid=project.grid.map(row=>row.filter((_,c)=>!selectedCols.has(c)));project.cols=project.grid[0].length;selectedCols.clear();renderGrid();saveCurrent()}
+function clearAreaSelection(){areaSelection=null;areaAnchor=null;renderGrid()}
+function normalizeArea(a,b){return {r1:Math.min(a.r,b.r),r2:Math.max(a.r,b.r),c1:Math.min(a.c,b.c),c2:Math.max(a.c,b.c)}}
+function selectAreaCell(r,c){if(!areaAnchor){areaAnchor={r,c};areaSelection={r1:r,r2:r,c1:c,c2:c};toast("Agora toque no canto oposto da área")}else{areaSelection=normalizeArea(areaAnchor,{r,c});areaAnchor=null;toast(`Área ${columnLabel(areaSelection.c1)}${areaSelection.r1+1}:${columnLabel(areaSelection.c2)}${areaSelection.r2+1}`)}renderGrid()}
+function areaContains(r,c){return areaSelection&&r>=areaSelection.r1&&r<=areaSelection.r2&&c>=areaSelection.c1&&c<=areaSelection.c2}
+function areaAction(action){if(!areaSelection)return toast("Selecione uma área primeiro");const a=areaSelection;pushHistory();
+ if(action==="erase")for(let r=a.r1;r<=a.r2;r++)for(let c=a.c1;c<=a.c2;c++)project.grid[r][c]=null;
+ if(action==="color")for(let r=a.r1;r<=a.r2;r++)for(let c=a.c1;c<=a.c2;c++)if(project.grid[r][c])project.grid[r][c]=selectedColor;
+ if(action==="mirrorH")for(let r=a.r1;r<=a.r2;r++){const part=project.grid[r].slice(a.c1,a.c2+1).reverse();part.forEach((v,i)=>project.grid[r][a.c1+i]=v)}
+ if(action==="mirrorV"){const rows=project.grid.slice(a.r1,a.r2+1).map(r=>r.slice(a.c1,a.c2+1)).reverse();rows.forEach((row,i)=>row.forEach((v,j)=>project.grid[a.r1+i][a.c1+j]=v))}
+ renderGrid();saveCurrent();toast("Área atualizada")}
+function centralizeDrawing(){let minR=project.rows,maxR=-1,minC=project.cols,maxC=-1;project.grid.forEach((row,r)=>row.forEach((v,c)=>{if(v){minR=Math.min(minR,r);maxR=Math.max(maxR,r);minC=Math.min(minC,c);maxC=Math.max(maxC,c)}}));if(maxR<0)return;pushHistory();const h=maxR-minR+1,w=maxC-minC+1,nr=Math.floor((project.rows-h)/2),nc=Math.floor((project.cols-w)/2),ng=Array.from({length:project.rows},()=>Array(project.cols).fill(null));for(let r=0;r<h;r++)for(let c=0;c<w;c++)ng[nr+r][nc+c]=project.grid[minR+r][minC+c];project.grid=ng;renderGrid();saveCurrent();toast("Desenho centralizado")}
+function autoContour(){if(!project)return;pushHistory();const old=project.grid.map(r=>r.slice()),dirs=[[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]];for(let r=0;r<project.rows;r++)for(let c=0;c<project.cols;c++)if(!old[r][c]&&dirs.some(([dr,dc])=>old[r+dr]?.[c+dc]))project.grid[r][c]=selectedColor;renderGrid();saveCurrent();toast("Contorno automático aplicado")}
 
 function rotate90(){
   if(!project) return;
@@ -843,7 +893,7 @@ async function generateProjectFromImage(){
   };
 
   selectedColor=project.palette[0].id;
-  tool="paint"; symmetry=false; undoStack=[]; redoStack=[]; selectedRows.clear(); updateRowSelectionBar(); zoomLevel=1;
+  tool="paint"; symmetry=false; undoStack=[]; redoStack=[]; selectedRows.clear(); selectedCols.clear(); areaSelection=null; updateRowSelectionBar(); updateColSelectionBar(); zoomLevel=1;
   setProjectLabel(); renderPalette();
   $("editorPaletteBar")?.classList.remove("paletteCollapsed");
   $("paletteBtn")?.classList.add("activeTool");
@@ -990,13 +1040,14 @@ function renderGrid(){
   project.grid.forEach((row,r)=>{
     row.forEach((colorId,c)=>{
       const bead=document.createElement("button");
-      bead.className="bead"+(colorId?"":" empty")+(selectedRows.has(r)?" selectedRowBead":"");
+      bead.className="bead"+(colorId?"":" empty")+(selectedRows.has(r)?" selectedRowBead":"")+(selectedCols.has(c)?" selectedColBead":"")+(areaContains(r,c)?" selectedAreaBead":"");
       bead.dataset.r=r; bead.dataset.c=c;
       const color=project.palette.find(x=>x.id===colorId);
       if(color) bead.style.background=color.hex;
       bead.addEventListener("pointerdown",(e)=>{
         if(tool==="pan") return;
         e.preventDefault();
+        if(tool==="area"){selectAreaCell(r,c);return;}
 
         // Célula já colorida: não sobrescreve direto.
         // Pede uma nova cor usando a mesma paleta do projeto.
@@ -1045,7 +1096,7 @@ function updateBeadDom(r,c){
   if(!bead) return;
   const colorId=project.grid[r][c];
   const color=project.palette.find(x=>x.id===colorId);
-  bead.className="bead"+(colorId?"":" empty")+(selectedRows.has(r)?" selectedRowBead":"");
+  bead.className="bead"+(colorId?"":" empty")+(selectedRows.has(r)?" selectedRowBead":"")+(selectedCols.has(c)?" selectedColBead":"")+(areaContains(r,c)?" selectedAreaBead":"");
   bead.style.background=color?color.hex:"";
 }
 
@@ -1065,6 +1116,7 @@ function updateToolButtons(){
   $("paintToolBtn").classList.toggle("activeTool",tool==="paint");
   $("eraseToolBtn").classList.toggle("activeTool",tool==="erase");
   $("panToolBtn")?.classList.toggle("activeTool",tool==="pan");
+  $("areaToolBtn")?.classList.toggle("activeTool",tool==="area");
   $("gridViewport")?.classList.toggle("panMode",tool==="pan");
   $("symmetryBtn").classList.toggle("activeTool",symmetry);
 }
@@ -1276,3 +1328,20 @@ setupLaunchQueue();
 $("copyRowsUpBtn")?.addEventListener("click",()=>copySelectedRows("up"));
 $("copyRowsDownBtn")?.addEventListener("click",()=>copySelectedRows("down"));
 $("clearRowSelectionBtn")?.addEventListener("click",clearRowSelection);
+$("copyColsLeftBtn")?.addEventListener("click",()=>copySelectedCols("left"));
+$("copyColsRightBtn")?.addEventListener("click",()=>copySelectedCols("right"));
+$("clearColSelectionBtn")?.addEventListener("click",clearColSelection);
+$("insertRowAboveBtn")?.addEventListener("click",()=>insertRow("above"));
+$("insertRowBelowBtn")?.addEventListener("click",()=>insertRow("below"));
+$("deleteRowsBtn")?.addEventListener("click",deleteSelectedRows);
+$("insertColLeftBtn")?.addEventListener("click",()=>insertCol("left"));
+$("insertColRightBtn")?.addEventListener("click",()=>insertCol("right"));
+$("deleteColsBtn")?.addEventListener("click",deleteSelectedCols);
+$("areaToolBtn")?.addEventListener("click",()=>{tool=tool==="area"?"paint":"area";areaAnchor=null;updateToolButtons();toast(tool==="area"?"Toque em dois cantos da área":"Seleção de área encerrada")});
+$("areaEraseBtn")?.addEventListener("click",()=>areaAction("erase"));
+$("areaColorBtn")?.addEventListener("click",()=>areaAction("color"));
+$("areaMirrorHBtn")?.addEventListener("click",()=>areaAction("mirrorH"));
+$("areaMirrorVBtn")?.addEventListener("click",()=>areaAction("mirrorV"));
+$("clearAreaBtn")?.addEventListener("click",clearAreaSelection);
+$("centerDrawingBtn")?.addEventListener("click",centralizeDrawing);
+$("contourBtn")?.addEventListener("click",autoContour);

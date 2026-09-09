@@ -253,3 +253,11 @@ A associação direta do arquivo `.jpm` depende do suporte do navegador/sistema 
 - Mantido o efeito realista dentro das próprias miçangas.
 - Mantidos os bloqueios das barras, paleta, tabela e réguas da V5.17.
 - Mantidas as melhorias da captura profissional da V5.16.
+
+## V5.20
+- Seleção múltipla de colunas pela régua A/B/C com cópia esquerda/direita e repetição.
+- Inserção e exclusão de linhas/colunas pelas ferramentas de seleção.
+- Seleção retangular por dois cantos, com recolorir, apagar e espelhar horizontal/vertical.
+- Centralização automática do desenho e contorno automático com a cor ativa.
+- Paleta do editor redesenhada com círculos perfeitamente simétricos.
+- Mantidos bloqueios de barras/réguas, captura profissional e recursos anteriores.
