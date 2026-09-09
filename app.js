@@ -56,7 +56,7 @@ const defaultPalette = [
 ];
 
 let project = null;
-let tool = "paint";
+let tool = "paint"; // paint=lápis, standard=menu por célula, cell=cor fixa por toque
 let selectedColor = defaultPalette[0].id;
 let symmetry = false;
 let undoStack = [];
@@ -115,8 +115,7 @@ function setupZoomGestures(){
       e.preventDefault();
       pinchStartDistance=touchDistance(e.touches[0],e.touches[1]);
       pinchStartZoom=zoomLevel;
-    }else if(e.touches.length===1 && tool==="pan"){
-      e.preventDefault();
+    }else if(e.touches.length===1 && zoomLevel>1){
       panStart={x:e.touches[0].clientX,y:e.touches[0].clientY,left:viewport.scrollLeft,top:viewport.scrollTop};
     }
   },{passive:false});
@@ -128,7 +127,7 @@ function setupZoomGestures(){
       const cy=((e.touches[0].clientY+e.touches[1].clientY)/2)-rect.top;
       const d=touchDistance(e.touches[0],e.touches[1]);
       applyZoom(pinchStartZoom*(d/pinchStartDistance),cx,cy);
-    }else if(e.touches.length===1 && panStart && tool==="pan"){
+    }else if(e.touches.length===1 && panStart && zoomLevel>1){
       e.preventDefault();
       const t=e.touches[0];
       viewport.scrollLeft=panStart.left-(t.clientX-panStart.x);
@@ -292,10 +291,20 @@ function rgbToHex(r,g,b){
   return "#"+[r,g,b].map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,"0")).join("");
 }
 
+let autoBackgroundRGB=null;
 function isBackgroundPixel(r,g,b,mode){
   if(mode==="light") return r>235 && g>235 && b>235;
   if(mode==="dark") return r<25 && g<25 && b<25;
+  if(mode==="auto" && autoBackgroundRGB){
+    const dr=r-autoBackgroundRGB[0], dg=g-autoBackgroundRGB[1], db=b-autoBackgroundRGB[2];
+    return (dr*dr+dg*dg+db*db) < 3600;
+  }
   return false;
+}
+function detectBackgroundFromCorners(ctx,w,h){
+  const pts=[[1,1],[Math.max(1,w-2),1],[1,Math.max(1,h-2)],[Math.max(1,w-2),Math.max(1,h-2)]];
+  const samples=pts.map(([x,y])=>{const p=ctx.getImageData(x,y,1,1).data;return [p[0],p[1],p[2]]});
+  return [0,1,2].map(k=>Math.round(samples.reduce((s,p)=>s+p[k],0)/samples.length));
 }
 
 function buildQuantizedPalette(pixels, maxColors, bgMode){
@@ -352,8 +361,9 @@ async function generateProjectFromImage(){
     return;
   }
 
-  const cols = Number($("imageColsInput").value)||20;
-  const maxColors = Number($("imageColorsInput").value)||8;
+  const rows = Math.max(4,Math.min(80,Number($("imageRowsInput").value)||30));
+  const cols = Math.max(4,Math.min(60,Number($("imageColsInput").value)||20));
+  const maxColors = Math.max(2,Number($("imageColorsInput").value)||8);
   const bgMode = $("backgroundModeInput").value;
   const name = $("imageProjectName").value.trim() || "Brinco convertido";
 
@@ -365,10 +375,9 @@ async function generateProjectFromImage(){
   canvas.width=Math.max(1,Math.round(uploadedImage.naturalWidth*scale));
   canvas.height=Math.max(1,Math.round(uploadedImage.naturalHeight*scale));
   ctx.drawImage(uploadedImage,0,0,canvas.width,canvas.height);
+  autoBackgroundRGB = bgMode==="auto" ? detectBackgroundFromCorners(ctx,canvas.width,canvas.height) : null;
 
   const crop=cropTransparentBounds(ctx,canvas.width,canvas.height,bgMode);
-  const aspect=crop.h/crop.w;
-  const rows=Math.max(4,Math.min(80,Math.round(cols*aspect)));
 
   const sample=document.createElement("canvas");
   sample.width=cols;
@@ -459,61 +468,9 @@ function resetTheme(){
   toast("Cores de fundo restauradas");
 }
 
-let currentView="homeView";
-let lastBackAt=0;
-let historyReady=false;
-
 function showView(id){
-  currentView=id;
   views.forEach(v=>$(v).classList.toggle("active",v===id));
 }
-
-function initAppHistory(){
-  if(historyReady) return;
-  historyReady=true;
-  // Estado raiz + guarda de saída: o primeiro Voltar na tela inicial não fecha o PWA.
-  history.replaceState({jp:true,view:"homeView",root:true},"");
-  history.pushState({jp:true,view:"homeView",guard:true},"");
-}
-
-function navigateTo(id,{replace=false}={}){
-  showView(id);
-  const state={jp:true,view:id};
-  if(replace) history.replaceState(state,"");
-  else history.pushState(state,"");
-}
-
-function goHomeFromCurrent(){
-  if(currentView==="homeView") return;
-  // As telas do app são mantidas rasas no histórico; voltar retorna ao início.
-  history.back();
-}
-
-window.addEventListener("popstate",(e)=>{
-  const st=e.state;
-  if(st?.jp && st.view && st.view!=="homeView") {
-    showView(st.view);
-    return;
-  }
-
-  if(st?.jp && st.view==="homeView") {
-    showView("homeView");
-    setProjectLabel();
-    const now=Date.now();
-    if(now-lastBackAt<1800){
-      // Segundo Voltar: libera a navegação para o sistema fechar/sair do PWA.
-      lastBackAt=0;
-      setTimeout(()=>history.back(),0);
-      return;
-    }
-    lastBackAt=now;
-    toast("Pressione voltar novamente para sair");
-    history.pushState({jp:true,view:"homeView",guard:true},"");
-    return;
-  }
-
-  // Se o navegador entregar um estado externo, não tentamos prendê-lo no app.
-});
 
 function toast(msg){
   $("toast").textContent = msg;
@@ -551,23 +508,6 @@ function newProjectData(){
   });
 }
 
-let pendingCellTap=null;
-let pendingPaintTimer=null;
-
-function cancelPendingPaint(){
-  if(pendingPaintTimer){ clearTimeout(pendingPaintTimer); pendingPaintTimer=null; }
-}
-
-function beginPaintFromPending(){
-  if(!pendingCellTap || tool!=="paint") return;
-  const {r,c}=pendingCellTap;
-  cancelPendingPaint();
-  pendingCellTap=null;
-  pushHistory();
-  isPointerDown=true;
-  applyAt(r,c);
-}
-
 function renderGrid(){
   const g = $("beadGrid");
   g.innerHTML="";
@@ -581,48 +521,47 @@ function renderGrid(){
       const color=project.palette.find(x=>x.id===colorId);
       if(color) bead.style.background=color.hex;
       bead.addEventListener("pointerdown",(e)=>{
-        if(tool==="pan") return;
+        if(e.pointerType==="touch" && e.isPrimary===false) return;
         e.preventDefault();
-        if(tool==="cellpick"){ openCellColorPicker(r,c); return; }
-        if(tool==="erase"){
-          isPointerDown=true; pushHistory(); applyAt(r,c); return;
-        }
-        // No pincel: toque curto abre o menu da célula; segurar/arrastar pinta.
-        pendingCellTap={r,c,x:e.clientX,y:e.clientY,pointerId:e.pointerId};
-        cancelPendingPaint();
-        pendingPaintTimer=setTimeout(beginPaintFromPending,220);
+        if(tool==="standard") { isPointerDown=false; openCellColorMenu(r,c); return; }
+        pushHistory();
+        applyAt(r,c);
+        isPointerDown = tool==="paint";
+        if(isPointerDown) bead.setPointerCapture?.(e.pointerId);
       });
       bead.addEventListener("pointerenter",()=>{
-        if(pendingCellTap && tool==="paint") beginPaintFromPending();
-        if(isPointerDown) applyAt(r,c,false);
+        if(tool==="paint" && isPointerDown) applyAt(r,c,false);
       });
-      bead.addEventListener("pointerup",()=>{
-        if(pendingCellTap && pendingCellTap.r===r && pendingCellTap.c===c && tool==="paint"){
-          cancelPendingPaint();
-          pendingCellTap=null;
-          isPointerDown=false;
-          openCellColorPicker(r,c);
-          return;
-        }
-        isPointerDown=false;
-      });
-      bead.addEventListener("pointercancel",()=>{
-        cancelPendingPaint(); pendingCellTap=null; isPointerDown=false;
-      });
+      bead.addEventListener("pointerup",()=>{isPointerDown=false});
+      bead.addEventListener("pointercancel",()=>{isPointerDown=false});
       g.appendChild(bead);
     })
   });
-  g.onpointermove=(e)=>{
-    if(!pendingCellTap || tool!=="paint") return;
-    if(Math.hypot(e.clientX-pendingCellTap.x,e.clientY-pendingCellTap.y)>8) beginPaintFromPending();
-  };
   updateStats();
 }
 
-document.addEventListener("pointerup",()=>{
-  if(pendingCellTap){ cancelPendingPaint(); pendingCellTap=null; }
-  isPointerDown=false;
-});
+let menuCell=null;
+function openCellColorMenu(r,c){
+  menuCell={r,c};
+  const wrap=$("cellColorChoices");
+  wrap.innerHTML="";
+  project.palette.forEach(color=>{
+    const b=document.createElement("button");
+    b.className="colorSwatch"+(project.grid[r][c]===color.id?" selected":"");
+    b.style.background=color.hex;
+    b.title=`${color.name} (${color.code})`;
+    b.onclick=()=>{
+      pushHistory(); selectedColor=color.id; project.grid[r][c]=color.id;
+      if(symmetry) project.grid[r][project.cols-1-c]=color.id;
+      closeCellColorMenu(); renderPalette(); renderGrid();
+    };
+    wrap.appendChild(b);
+  });
+  $("cellColorMenu").classList.remove("hidden");
+}
+function closeCellColorMenu(){ $("cellColorMenu")?.classList.add("hidden"); menuCell=null; }
+
+document.addEventListener("pointerup",()=>isPointerDown=false);
 
 function applyAt(r,c,rerender=true){
   const value = tool==="erase" ? null : selectedColor;
@@ -655,18 +594,16 @@ function renderPalette(){
     b.className="colorSwatch"+(color.id===selectedColor?" selected":"");
     b.style.background=color.hex;
     b.title=`${color.name} (${color.code})`;
-    b.dataset.code=color.code||"";
-    b.onclick=()=>{selectedColor=color.id; tool="paint"; updateToolButtons(); renderPalette()};
+    b.onclick=()=>{selectedColor=color.id; updateToolButtons(); renderPalette()};
     wrap.appendChild(b);
   })
 }
 
 function updateToolButtons(){
+  $("standardToolBtn")?.classList.toggle("activeTool",tool==="standard");
   $("paintToolBtn").classList.toggle("activeTool",tool==="paint");
+  $("cellToolBtn")?.classList.toggle("activeTool",tool==="cell");
   $("eraseToolBtn").classList.toggle("activeTool",tool==="erase");
-  $("cellColorToolBtn")?.classList.toggle("activeTool",tool==="cellpick");
-  $("handToolBtn")?.classList.toggle("activeTool",tool==="pan");
-  $("gridViewport")?.classList.toggle("panMode",tool==="pan");
   $("symmetryBtn").classList.toggle("activeTool",symmetry);
 }
 
@@ -715,7 +652,7 @@ function openProject(p){
   project=ensurePalette(JSON.parse(JSON.stringify(p)));
   selectedColor=project.palette?.[0]?.id || defaultPalette[0].id;
   tool="paint"; symmetry=false; undoStack=[]; redoStack=[];
-  zoomLevel=1; setProjectLabel(); renderPalette(); updateToolButtons(); renderGrid(); navigateTo("editorView",{replace:true}); setupZoomGestures(); applyZoom(1); setLoomMode(project.technique==="Tear");
+  zoomLevel=1; setProjectLabel(); renderPalette(); updateToolButtons(); renderGrid(); showView("editorView"); setupZoomGestures(); applyZoom(1); setLoomMode(project.technique==="Tear");
 }
 
 function renderProjects(){
@@ -752,9 +689,9 @@ $("bgQuickBtn").onclick=()=>{
   }
 };
 
-$("newProjectBtn").onclick=()=>navigateTo("newProjectView");
-$("imageProjectBtn").onclick=()=>navigateTo("imageProjectView");
-$("cancelImageBtn").onclick=goHomeFromCurrent;
+$("newProjectBtn").onclick=()=>showView("newProjectView");
+$("imageProjectBtn").onclick=()=>showView("imageProjectView");
+$("cancelImageBtn").onclick=()=>showView("homeView");
 $("imageInput").onchange=(e)=>{
   const file=e.target.files?.[0];
   if(!file) return;
@@ -768,19 +705,21 @@ $("imageInput").onchange=(e)=>{
   img.src=url;
 };
 $("generateFromImageBtn").onclick=generateProjectFromImage;
-$("cancelNewBtn").onclick=goHomeFromCurrent;
+$("cancelNewBtn").onclick=()=>showView("homeView");
 $("createProjectBtn").onclick=()=>{
   project=newProjectData(); selectedColor=project.palette[0].id; undoStack=[]; redoStack=[];
-  zoomLevel=1; setProjectLabel(); renderPalette(); updateToolButtons(); renderGrid(); navigateTo("editorView",{replace:true}); setupZoomGestures(); applyZoom(1); setLoomMode(project.technique==="Tear");
+  zoomLevel=1; setProjectLabel(); renderPalette(); updateToolButtons(); renderGrid(); showView("editorView"); setupZoomGestures(); applyZoom(1); setLoomMode(project.technique==="Tear");
 }
-$("backHomeBtn").onclick=()=>{saveCurrent(); goHomeFromCurrent();}
-$("openProjectsBtn").onclick=()=>{renderProjects(); navigateTo("projectsView")}
-$("projectsBackBtn").onclick=goHomeFromCurrent;
-$("handToolBtn").onclick=()=>{tool=tool==="pan"?"paint":"pan";isPointerDown=false;panStart=null;updateToolButtons();toast(tool==="pan"?"Modo mover: arraste o tear com um dedo":"Modo mover desligado")}
-$("paintToolBtn").onclick=()=>{tool="paint";updateToolButtons()}
+$("backHomeBtn").onclick=()=>{saveCurrent(); showView("homeView"); setProjectLabel()}
+$("openProjectsBtn").onclick=()=>{renderProjects(); showView("projectsView")}
+$("projectsBackBtn").onclick=()=>showView("homeView");
+$("standardToolBtn").onclick=()=>{tool="standard";isPointerDown=false;updateToolButtons();toast("Modo padrão: toque na célula para escolher a cor")}
+$("paintToolBtn").onclick=()=>{tool="paint";isPointerDown=false;updateToolButtons();toast("Modo lápis")}
+$("cellToolBtn").onclick=()=>{tool="cell";isPointerDown=false;updateToolButtons();toast("Modo célula: cor selecionada fica ativa")}
+$("closeCellColorMenu").onclick=closeCellColorMenu;
+$("cellColorMenu").addEventListener("click",e=>{if(e.target===$("cellColorMenu"))closeCellColorMenu()});
+$("clearCellFromMenu").onclick=()=>{if(!menuCell)return; const {r,c}=menuCell; pushHistory(); project.grid[r][c]=null; if(symmetry)project.grid[r][project.cols-1-c]=null; closeCellColorMenu(); renderGrid()};
 $("eraseToolBtn").onclick=()=>{tool="erase";updateToolButtons()}
-$("cellColorToolBtn").onclick=()=>{tool=tool==="cellpick"?"paint":"cellpick";updateToolButtons();toast(tool==="cellpick"?"Modo célula: toque numa miçanga para escolher a cor":"Seleção por célula desligada")}
-$("moreToolsBtn").onclick=()=>{$("moreToolsPanel").classList.toggle("hidden");$("moreToolsBtn").classList.toggle("activeTool",!$("moreToolsPanel").classList.contains("hidden"))}
 $("symmetryBtn").onclick=()=>{symmetry=!symmetry;updateToolButtons();toast(symmetry?"Simetria ligada":"Simetria desligada")}
 $("undoBtn").onclick=()=>{
   if(!project||!undoStack.length)return;
@@ -824,106 +763,6 @@ $("addColorBtn").onclick=()=>{
   selectedColor=id; renderPalette(); updateStats();
 }
 
-
-// ===== V6: cores fiéis, detecção automática, paleta flutuante e seleção por célula =====
-let cellPickerTarget=null;
-function hexRgb(hex){hex=String(hex||"").replace("#","");if(hex.length===3)hex=hex.split("").map(x=>x+x).join("");return [parseInt(hex.slice(0,2),16)||0,parseInt(hex.slice(2,4),16)||0,parseInt(hex.slice(4,6),16)||0]}
-function rgbLab(r,g,b){
-  let v=[r,g,b].map(x=>{x/=255;return x>.04045?Math.pow((x+.055)/1.055,2.4):x/12.92});
-  let x=(v[0]*.4124+v[1]*.3576+v[2]*.1805)/.95047,y=(v[0]*.2126+v[1]*.7152+v[2]*.0722),z=(v[0]*.0193+v[1]*.1192+v[2]*.9505)/1.08883;
-  [x,y,z]=[x,y,z].map(t=>t>.008856?Math.cbrt(t):(7.787*t+16/116));return [116*y-16,500*(x-y),200*(y-z)];
-}
-function labDist(a,b){return (a[0]-b[0])**2+(a[1]-b[1])**2+(a[2]-b[2])**2}
-function nearestPaletteIdLab(r,g,b,palette){const lab=rgbLab(r,g,b);let best=null,bd=Infinity;for(const c of palette){const rgb=c.rgb||hexRgb(c.hex),d=labDist(lab,rgbLab(...rgb));if(d<bd){bd=d;best=c}}return best?.id||null}
-function median(arr){const a=[...arr].sort((x,y)=>x-y);return a.length?a[Math.floor(a.length/2)]:0}
-function estimateBackground(ctx,w,h){
-  const d=ctx.getImageData(0,0,w,h).data,rs=[],gs=[],bs=[],band=Math.max(2,Math.round(Math.min(w,h)*.025));
-  const take=(x,y)=>{const i=(y*w+x)*4;if(d[i+3]>100){rs.push(d[i]);gs.push(d[i+1]);bs.push(d[i+2])}};
-  for(let x=0;x<w;x+=2){for(let y=0;y<band;y++)take(x,y);for(let y=h-band;y<h;y++)take(x,y)}
-  for(let y=0;y<h;y+=2){for(let x=0;x<band;x++)take(x,y);for(let x=w-band;x<w;x++)take(x,y)}
-  return [median(rs),median(gs),median(bs)];
-}
-function adaptiveForeground(r,g,b,bg,bgMode){
-  if(bgMode==="none")return true;
-  if(bgMode==="light" && r>225&&g>225&&b>225)return false;
-  if(bgMode==="dark" && r<55&&g<55&&b<55)return false;
-  const dl=Math.sqrt(labDist(rgbLab(r,g,b),rgbLab(...bg)));
-  const lum=(r+g+b)/3,bgl=(bg[0]+bg[1]+bg[2])/3;
-  const threshold=bgMode==="auto"?13:10;
-  return dl>threshold || Math.abs(lum-bgl)>24;
-}
-function denseObjectCrop(ctx,w,h,bgMode){
-  if(bgMode==="none")return {x:0,y:0,w,h,bg:[255,255,255]};
-  const bg=estimateBackground(ctx,w,h),d=ctx.getImageData(0,0,w,h).data,row=new Uint32Array(h),col=new Uint32Array(w);
-  for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=(y*w+x)*4;if(d[i+3]>100&&adaptiveForeground(d[i],d[i+1],d[i+2],bg,bgMode)){row[y]++;col[x]++}}
-  const rthr=Math.max(3,Math.round(w*.022)),cthr=Math.max(3,Math.round(h*.022));
-  let y0=0,y1=h-1,x0=0,x1=w-1;
-  while(y0<h&&row[y0]<rthr)y0++; while(y1>=0&&row[y1]<rthr)y1--;
-  while(x0<w&&col[x0]<cthr)x0++; while(x1>=0&&col[x1]<cthr)x1--;
-  if(x1<=x0||y1<=y0)return {x:0,y:0,w,h,bg};
-  const px=Math.round((x1-x0+1)*.025),py=Math.round((y1-y0+1)*.025);
-  x0=Math.max(0,x0-px);x1=Math.min(w-1,x1+px);y0=Math.max(0,y0-py);y1=Math.min(h-1,y1+py);
-  return {x:x0,y:y0,w:x1-x0+1,h:y1-y0+1,bg};
-}
-function cellRepresentatives(ctx,crop,cols,rows,bgMode){
-  const d=ctx.getImageData(0,0,ctx.canvas.width,ctx.canvas.height).data,w=ctx.canvas.width;
-  const reps=Array.from({length:rows},()=>Array(cols).fill(null)),colors=[];
-  for(let gy=0;gy<rows;gy++)for(let gx=0;gx<cols;gx++){
-    const sx0=crop.x+(gx+.18)*crop.w/cols,sx1=crop.x+(gx+.82)*crop.w/cols;
-    const sy0=crop.y+(gy+.18)*crop.h/rows,sy1=crop.y+(gy+.82)*crop.h/rows;
-    let sr=0,sg=0,sb=0,n=0,total=0;
-    const stepx=Math.max(1,Math.floor((sx1-sx0)/5)),stepy=Math.max(1,Math.floor((sy1-sy0)/5));
-    for(let y=Math.floor(sy0);y<sy1;y+=stepy)for(let x=Math.floor(sx0);x<sx1;x+=stepx){total++;const i=(y*w+x)*4;if(d[i+3]<100)continue;const r=d[i],g=d[i+1],b=d[i+2];if(adaptiveForeground(r,g,b,crop.bg,bgMode)){sr+=r;sg+=g;sb+=b;n++}}
-    if(n>=Math.max(2,total*.22)){const rgb=[sr/n,sg/n,sb/n];reps[gy][gx]=rgb;colors.push(rgb)}
-  }
-  return {reps,colors};
-}
-function kmeansRaw(pixels,k){
-  if(!pixels.length)return {centers:[],sse:0};k=Math.max(1,Math.min(k,pixels.length));
-  const sample=pixels.length>5000?pixels.filter((_,i)=>i%Math.ceil(pixels.length/5000)===0):pixels;
-  let centers=[sample[Math.floor(sample.length/2)].slice()];
-  while(centers.length<k){let best=sample[0],bd=-1;for(const p of sample){let d=Infinity;for(const c of centers)d=Math.min(d,labDist(rgbLab(...p),rgbLab(...c)));if(d>bd){bd=d;best=p}}centers.push(best.slice())}
-  for(let it=0;it<10;it++){
-    const sums=Array.from({length:k},()=>[0,0,0,0]);
-    for(const p of sample){let bi=0,bd=Infinity;for(let j=0;j<k;j++){const d=labDist(rgbLab(...p),rgbLab(...centers[j]));if(d<bd){bd=d;bi=j}}const q=sums[bi];q[0]+=p[0];q[1]+=p[1];q[2]+=p[2];q[3]++}
-    centers=sums.map((q,i)=>q[3]?[q[0]/q[3],q[1]/q[3],q[2]/q[3]]:centers[i]);
-  }
-  let sse=0;for(const p of sample){let bd=Infinity;for(const c of centers)bd=Math.min(bd,labDist(rgbLab(...p),rgbLab(...c)));sse+=bd}
-  return {centers,sse};
-}
-function autoKmeansPalette(pixels){
-  if(pixels.length<2)return[];const maxK=Math.min(10,Math.max(2,Math.floor(Math.sqrt(pixels.length))));let prev=kmeansRaw(pixels,2),chosen=prev;
-  for(let k=3;k<=maxK;k++){const cur=kmeansRaw(pixels,k),improve=(prev.sse-cur.sse)/Math.max(prev.sse,1);if(improve<.22){chosen=prev;break}chosen=cur;prev=cur}
-  return chosen.centers.map((rgb,i)=>({id:`img_${Date.now()}_${i}`,name:`Cor detectada ${i+1}`,code:`IMG${String(i+1).padStart(2,"0")}`,hex:rgbToHex(...rgb),rgb}));
-}
-function kmeansPalette(pixels,k){const raw=kmeansRaw(pixels,k);return raw.centers.map((rgb,i)=>({id:`img_${Date.now()}_${i}`,name:`Cor detectada ${i+1}`,code:`IMG${String(i+1).padStart(2,"0")}`,hex:rgbToHex(...rgb),rgb}))}
-function manualPalette(text){const parts=String(text||"").split(",").map(x=>x.trim()).filter(Boolean);return parts.map((v,i)=>{let base=defaultPalette.find(c=>c.name.toLowerCase()===v.toLowerCase()||c.code===v);let hex=/^#[0-9a-f]{6}$/i.test(v)?v:(base?.hex||null);if(!hex)return null;return {id:`manual_${Date.now()}_${i}`,name:base?.name||`Cor informada ${i+1}`,code:base?.code||`MAN${String(i+1).padStart(2,"0")}`,hex,rgb:hexRgb(hex)}}).filter(Boolean)}
-function showDetectedPalette(pal){const box=$("detectedColorsBox"),wrap=$("detectedColorsPreview");if(!box||!wrap)return;wrap.innerHTML="";pal.forEach(c=>{const d=document.createElement("span");d.className="detectedChip";d.innerHTML=`<i style="background:${c.hex}"></i>${c.hex}`;wrap.appendChild(d)});box.classList.toggle("hidden",!pal.length)}
-function imageAnalysisCanvas(){if(!uploadedImage)return null;const canvas=$("imageProcessCanvas"),ctx=canvas.getContext("2d",{willReadFrequently:true});const scale=Math.min(1,900/Math.max(uploadedImage.naturalWidth,uploadedImage.naturalHeight));canvas.width=Math.max(1,Math.round(uploadedImage.naturalWidth*scale));canvas.height=Math.max(1,Math.round(uploadedImage.naturalHeight*scale));ctx.drawImage(uploadedImage,0,0,canvas.width,canvas.height);return {canvas,ctx}}
-function detectCurrentImageColors(){
-  if(!uploadedImage){toast("Escolha uma imagem primeiro");return[]}
-  const a=imageAnalysisCanvas(),mode=$("backgroundModeInput").value,crop=denseObjectCrop(a.ctx,a.canvas.width,a.canvas.height,mode),cols=Number($("imageColsInput").value)||20,rows=Math.max(4,Math.min(100,Math.round(cols*crop.h/crop.w))),cells=cellRepresentatives(a.ctx,crop,cols,rows,mode);
-  const val=$("imageColorsInput").value,pal=val==="auto"?autoKmeansPalette(cells.colors):kmeansPalette(cells.colors,Math.max(2,Number(val)||2));showDetectedPalette(pal);toast(`${pal.length} cores detectadas`);return pal
-}
-$("detectImageColorsBtn").onclick=detectCurrentImageColors;
-
-async function generateProjectFromImageV61(){
-  if(!uploadedImage){toast("Escolha uma imagem primeiro");return}
-  const cols=Number($("imageColsInput").value)||20,bgMode=$("backgroundModeInput").value,name=$("imageProjectName").value.trim()||"Brinco convertido";
-  const a=imageAnalysisCanvas(),crop=denseObjectCrop(a.ctx,a.canvas.width,a.canvas.height,bgMode),rows=Math.max(4,Math.min(100,Math.round(cols*crop.h/crop.w))),cells=cellRepresentatives(a.ctx,crop,cols,rows,bgMode);
-  let imgPalette=manualPalette($("manualImageColors").value);if(!imgPalette.length){const val=$("imageColorsInput").value;imgPalette=val==="auto"?autoKmeansPalette(cells.colors):kmeansPalette(cells.colors,Math.max(2,Number(val)||2))}
-  if(!imgPalette.length){toast("Não consegui identificar as miçangas. Tente outro modo de fundo.");return}showDetectedPalette(imgPalette);
-  const grid=Array.from({length:rows},()=>Array(cols).fill(null));for(let y=0;y<rows;y++)for(let x=0;x<cols;x++){const rgb=cells.reps[y][x];if(rgb)grid[y][x]=nearestPaletteIdLab(...rgb,imgPalette)}
-  project={id:uid(),name,rows,cols,beadSize:3,technique:"Grade reta",palette:imgPalette.map(({rgb,...rest})=>rest),grid,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),source:"image-v6.1"};selectedColor=project.palette[0].id;tool="paint";symmetry=false;undoStack=[];redoStack=[];zoomLevel=1;setProjectLabel();renderPalette();updateToolButtons();renderGrid();navigateTo("editorView",{replace:true});setupZoomGestures();applyZoom(1);setLoomMode(false);toast(`Diagrama criado com ${imgPalette.length} cores`)
-}
-$("generateFromImageBtn").onclick=generateProjectFromImageV61;
-
-function openCellColorPicker(r,c){cellPickerTarget={r,c};$("cellPickerTitle").textContent=`Célula ${columnLabel(c)}${r+1} — escolher cor`;$("cellColorSearch").value="";renderCellColorOptions();$("cellColorPicker").classList.remove("hidden")}
-function renderCellColorOptions(){if(!project)return;const q=$("cellColorSearch").value.trim().toLowerCase(),wrap=$("cellColorOptions");wrap.innerHTML="";project.palette.filter(c=>!q||c.name.toLowerCase().includes(q)||String(c.code).toLowerCase().includes(q)).forEach(c=>{const b=document.createElement("button");b.className="cellColorOption";b.innerHTML=`<span class="cellColorOptionDot" style="background:${c.hex}"></span><span><strong>${escapeHtml(c.name)}</strong><small>Cód. ${escapeHtml(c.code||"")} · ${c.hex}</small></span>`;b.onclick=()=>{if(!cellPickerTarget)return;pushHistory();selectedColor=c.id;project.grid[cellPickerTarget.r][cellPickerTarget.c]=c.id;renderGrid();renderPalette();$("cellColorPicker").classList.add("hidden");toast(`Cor ${c.code||c.name} aplicada`)};wrap.appendChild(b)})}
-$("cellColorSearch").oninput=renderCellColorOptions;$("closeCellPickerBtn").onclick=()=>$("cellColorPicker").classList.add("hidden");
-
-(function setupInlinePalette(){const pal=$("floatingPalette"),btn=$("collapsePaletteBtn");if(!pal||!btn)return;btn.onclick=()=>{pal.classList.toggle("collapsed");btn.textContent=pal.classList.contains("collapsed")?"＋":"−"}})();
-
 window.addEventListener("beforeinstallprompt",(e)=>{
   e.preventDefault(); deferredPrompt=e; $("installBtn").classList.remove("hidden");
 });
@@ -936,7 +775,6 @@ if("serviceWorker" in navigator){
   window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js"));
 }
 
-initAppHistory();
 applyTheme(loadTheme());
 updateLastProject();
 setProjectLabel();

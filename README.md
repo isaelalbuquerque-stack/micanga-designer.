@@ -87,62 +87,22 @@ Observação: a conversão é aproximada. Fotos com fundo simples, boa iluminaç
 - Mantidas as funções de imagem → diagrama, zoom, espelhamento, tear, paleta e personalização
 
 
-## V5 — Projetos compartilháveis e exportação
-
-- Zoom de **5% a 500%**
-- Régua com colunas A, B, C... e linhas 1, 2, 3...
-- Espelhar horizontal e vertical
-- Girar 90°
-- 48 cores padrão
-- Exportar em JPEG
-- Exportar em PDF
-- Salvar projeto completo em `.jpm`
-- Importar `.jpm` em outro celular
-- Compartilhar `.jpm` pela folha de compartilhamento quando suportado
-- Salvar como cópia
-- Ícones JP 192×192 e 512×512
-- Cache offline V5
-
-A associação direta do arquivo `.jpm` depende do suporte do navegador/sistema operacional. O botão “Importar projeto .JPM” funciona como alternativa segura.
+## V6 — Modos de edição no celular
+- Modo Lápis ✏️: pinta continuamente e permite arrastar sobre as células.
+- Modo Padrão ◉: ao tocar numa célula, abre o menu de cores para escolher a cor daquela miçanga.
+- Modo Célula ▦: mantém a cor selecionada e aplica a mesma cor nas próximas células tocadas.
+- A escolha de uma cor na paleta não troca automaticamente o modo de edição.
+- Cache offline atualizado para forçar a instalação da nova versão.
 
 
-## V6 — Digitalização fiel e edição rápida
-- Detecção automática de cores da foto
-- Quantidade de cores automática ou manual a partir de 2 cores
-- Cores informadas pelo usuário por nome, código ou hexadecimal
-- Agrupamento de cores com média real da fotografia
-- Comparação de cor perceptual em LAB
-- Prévia das cores detectadas
-- Paleta flutuante e arrastável na tela
-- Paleta recolhível
-- Código da miçanga visível na paleta
-- Ferramenta de seleção de cor diretamente pela célula
-- Busca de miçanga por nome ou código ao editar a célula
+## V6.1 — Captura por foto com grade manual
+- Na função Imagem → Diagrama, linhas e colunas agora são definidas manualmente.
+- O app não calcula mais automaticamente o número de linhas pela proporção da foto.
+- Limites: 4–80 linhas e 4–60 colunas.
+- Quantidade de cores continua configurável separadamente.
 
 
-## V6.1 — correções de usabilidade e digitalização
-- Barra de ferramentas compacta com botão Mais
-- Modo Mão para arrastar o tear com um dedo
-- Paleta abaixo da grade, sem cobrir o desenho
-- Paleta em grade, sem depender de barra horizontal
-- Automático começa em 2 cores e decide a quantidade pela foto
-- Detecção automática do fundo pela borda da imagem
-- Recorte focado na região densa de miçangas
-- Amostragem do centro de cada célula para evitar mistura com o fundo
-- Fundo escuro não vira mais uma cor dominante do diagrama
-
-
-## V6.2 — Seleção direta por célula
-- Toque curto em qualquer miçanga abre o seletor de cores daquela célula.
-- O seletor mostra cor, nome e código da miçanga e permite busca por nome/código.
-- Arrastar com o pincel continua pintando várias células.
-- Segurar brevemente também inicia pintura com a cor já selecionada.
-- O botão 🎯 permanece como modo dedicado de seleção por célula.
-
-
-## V6.3 — Botão Voltar do Android
-- O botão Voltar do celular agora navega dentro do aplicativo em vez de fechar imediatamente.
-- Editor, Imagem → Diagrama, Novo projeto e Meus projetos retornam corretamente para a tela inicial.
-- Na tela inicial, o primeiro Voltar mostra “Pressione voltar novamente para sair”.
-- Um segundo Voltar em até ~2 segundos libera a saída do aplicativo.
-- Mantidas as funções V6.2: seleção de cor por célula, modo Mão, zoom por pinça e digitalização melhorada.
+## V6.2
+- Foto: mínimo de 2 cores.
+- Linhas e colunas manuais.
+- Opção automática para ignorar o fundo da imagem.

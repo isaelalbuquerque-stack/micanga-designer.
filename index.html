@@ -102,35 +102,29 @@
 
       <section id="editorView" class="view editorView">
         <div class="toolbar card">
-          <div class="toolbarMain">
-            <button id="backHomeBtn" title="Início">⌂</button>
-            <button id="handToolBtn" title="Mover tear">✋</button>
-            <button id="paintToolBtn" class="activeTool" title="Pincel">✏️</button>
-            <button id="eraseToolBtn" title="Borracha">🧽</button>
-            <button id="cellColorToolBtn" title="Escolher cor na célula">🎯</button>
-            <button id="undoBtn" title="Desfazer">↶</button>
-            <button id="redoBtn" title="Refazer">↷</button>
-            <button id="moreToolsBtn" title="Mais ferramentas">⋮</button>
-          </div>
-          <div id="moreToolsPanel" class="moreToolsPanel hidden">
-            <button id="symmetryBtn" title="Simetria ao pintar">↔</button>
-            <button id="mirrorHBtn" title="Espelhar horizontalmente">⇆</button>
-            <button id="mirrorVBtn" title="Espelhar verticalmente">⇅</button>
-            <button id="zoomOutBtn" title="Diminuir zoom">−</button>
-            <button id="zoomResetBtn" title="Zoom atual">100%</button>
-            <button id="zoomInBtn" title="Aumentar zoom">＋</button>
-            <button id="loomBtn" title="Visualização de tear">🧵</button>
-            <button id="rotateBtn" title="Girar 90°">⟳</button>
-            <button id="bgQuickBtn" title="Mudar fundo">🎨</button>
-            <button id="clearBtn" title="Limpar">🗑</button>
-            <button id="saveBtn" class="saveTool" title="Salvar">💾</button>
-            <button id="saveAsBtn" title="Salvar como">📝</button>
-            <button id="exportJpegBtn" title="Salvar JPEG">JPG</button>
-            <button id="exportPdfBtn" title="Salvar PDF">PDF</button>
-            <button id="shareProjectBtn" title="Compartilhar projeto .JPM">↗</button>
-          </div>
+          <button id="backHomeBtn" title="Início">⌂</button>
+          <button id="standardToolBtn" title="Padrão: toque na célula e escolha a cor">◉</button>
+          <button id="paintToolBtn" class="activeTool" title="Lápis: pinte e arraste">✏️</button>
+          <button id="cellToolBtn" title="Célula: aplica a cor selecionada a cada toque">▦</button>
+          <button id="eraseToolBtn" title="Borracha">🧽</button>
+          <button id="undoBtn" title="Desfazer">↶</button>
+          <button id="redoBtn" title="Refazer">↷</button>
+          <button id="symmetryBtn" title="Simetria ao pintar">↔</button>
+          <button id="mirrorHBtn" title="Espelhar desenho horizontalmente">⇆</button>
+          <button id="mirrorVBtn" title="Espelhar desenho verticalmente">⇅</button>
+          <button id="zoomOutBtn" title="Diminuir zoom">−</button>
+          <button id="zoomResetBtn" title="Zoom atual">100%</button>
+          <button id="zoomInBtn" title="Aumentar zoom">＋</button>
+          <button id="loomBtn" title="Visualização de tear">🧵</button>
+          <button id="rotateBtn" title="Girar 90°">⟳</button>
+          <button id="bgQuickBtn" title="Mudar fundo">🎨</button>
+          <button id="clearBtn" title="Limpar">🗑</button>
+          <button id="saveBtn" class="saveTool" title="Salvar">💾</button>
+          <button id="saveAsBtn" title="Salvar como">📝</button>
+          <button id="exportJpegBtn" title="Salvar JPEG">JPG</button>
+          <button id="exportPdfBtn" title="Salvar PDF">PDF</button>
+          <button id="shareProjectBtn" title="Compartilhar projeto .JPM">↗</button>
         </div>
-        <div class="cellTapHint">Toque numa miçanga: escolher cor • Arraste: pintar</div>
 
         <div class="canvasCard card">
           <div class="canvasTop">
@@ -159,10 +153,10 @@
           <div><strong id="dimensions">0 × 0 cm</strong><span>Aprox.</span></div>
         </div>
 
-        <div id="floatingPalette" class="palette card inlinePalette">
+        <div class="palette card">
           <div class="paletteHead">
-            <h3>🎨 Paleta</h3>
-            <div class="paletteHeadActions"><button id="collapsePaletteBtn" class="small" title="Recolher paleta">−</button><button id="addColorBtn" class="small">＋ Cor</button></div>
+            <h3>Paleta</h3>
+            <button id="addColorBtn" class="small">＋ Cor</button>
           </div>
           <div id="paletteColors" class="paletteColors"></div>
         </div>
@@ -172,6 +166,13 @@
             <h3>Lista de miçangas</h3>
           </div>
           <div id="materialsList" class="materialsList"></div>
+        </div>
+        <div id="cellColorMenu" class="cellColorMenu hidden" role="dialog" aria-modal="true" aria-label="Escolher cor">
+          <div class="cellColorPanel">
+            <div class="cellColorHead"><strong>Escolha a cor da célula</strong><button id="closeCellColorMenu" title="Fechar">✕</button></div>
+            <div id="cellColorChoices" class="cellColorChoices"></div>
+            <button id="clearCellFromMenu" class="secondary">Deixar célula vazia</button>
+          </div>
         </div>
       </section>
 
@@ -190,49 +191,34 @@
           </div>
 
           <div class="grid2">
-            <label>Largura do diagrama
-              <select id="imageColsInput">
-                <option value="12">12 colunas</option>
-                <option value="16">16 colunas</option>
-                <option value="20" selected>20 colunas</option>
-                <option value="24">24 colunas</option>
-                <option value="28">28 colunas</option>
-                <option value="32">32 colunas</option>
-                <option value="40">40 colunas</option>
-              </select>
+            <label>Linhas do diagrama
+              <input id="imageRowsInput" type="number" min="4" max="80" value="30" inputmode="numeric" />
             </label>
 
-            <label>Quantidade de cores
-              <select id="imageColorsInput">
-                <option value="auto" selected>Automático</option>
-                <option value="2">2 cores</option>
-                <option value="3">3 cores</option>
-                <option value="4">4 cores</option>
-                <option value="5">5 cores</option>
-                <option value="6">6 cores</option>
-                <option value="8">8 cores</option>
-                <option value="10">10 cores</option>
-                <option value="12">12 cores</option>
-                <option value="16">16 cores</option>
-                <option value="24">24 cores</option>
-              </select>
+            <label>Colunas do diagrama
+              <input id="imageColsInput" type="number" min="4" max="60" value="20" inputmode="numeric" />
             </label>
           </div>
 
-          <label>Cores presentes (opcional)
-            <input id="manualImageColors" placeholder="Ex.: preto, branco, #d4af37, vermelho" />
-            <small class="helperText">Se informar cores, o app prioriza exatamente essas referências. Separe por vírgulas.</small>
+          <label>Quantidade de cores
+            <select id="imageColorsInput">
+              <option value="2">2 cores</option>
+              <option value="3">3 cores</option>
+              <option value="4">4 cores</option>
+              <option value="6">6 cores</option>
+              <option value="8" selected>8 cores</option>
+              <option value="12">12 cores</option>
+              <option value="16">16 cores</option>
+              <option value="24">24 cores</option>
+            </select>
           </label>
-
-          <div id="detectedColorsBox" class="detectedColorsBox hidden"><strong>Cores detectadas</strong><div id="detectedColorsPreview"></div></div>
-          <button id="detectImageColorsBtn" class="secondary" type="button">🔎 Detectar cores da foto</button>
 
           <label>Fundo da imagem
             <select id="backgroundModeInput">
-              <option value="auto" selected>Detectar automaticamente</option>
-              <option value="dark">Ignorar fundo escuro</option>
-              <option value="light">Ignorar fundo claro</option>
               <option value="none">Não remover</option>
+              <option value="light" selected>Ignorar fundo claro</option>
+              <option value="dark">Ignorar fundo escuro</option>
+              <option value="auto">Ignorar fundo da imagem (automático)</option>
             </select>
           </label>
 
@@ -260,11 +246,6 @@
       </section>
     </main>
 
-    <div id="cellColorPicker" class="cellColorPicker hidden" role="dialog" aria-label="Escolher cor da célula">
-      <div class="cellPickerHead"><strong id="cellPickerTitle">Escolher miçanga</strong><button id="closeCellPickerBtn">×</button></div>
-      <input id="cellColorSearch" placeholder="Buscar por nome ou código" />
-      <div id="cellColorOptions" class="cellColorOptions"></div>
-    </div>
     <div id="toast" class="toast"></div>
   </div>
   <script src="app.js"></script>

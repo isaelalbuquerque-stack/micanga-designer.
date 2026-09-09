@@ -31,18 +31,11 @@ main{padding:14px;max-width:900px;margin:0 auto}
 .formCard label{display:grid;gap:7px;margin:14px 0;color:var(--muted);font-weight:600}
 input,select{width:100%;border:1px solid var(--border);background:#fff;padding:13px;border-radius:12px;color:var(--text)}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.rowBtns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
-.toolbar{display:grid;grid-template-columns:repeat(20,minmax(44px,1fr));gap:7px;padding:8px;position:sticky;top:77px;z-index:15;overflow-x:auto;scrollbar-width:auto}
+.toolbar{display:grid;grid-template-columns:repeat(15,minmax(44px,1fr));gap:7px;padding:8px;position:sticky;top:77px;z-index:15;overflow-x:auto;scrollbar-width:auto}
 .toolbar button{padding:10px 4px;background:var(--lilac-soft2);color:var(--text)}.toolbar .activeTool{outline:2px solid var(--primary);background:var(--lilac-soft);color:var(--primary-dark)}.toolbar .saveTool{background:linear-gradient(135deg,var(--primary),var(--primary2));color:#fff}
 .canvasCard{padding:8px;overflow:hidden}
 #gridViewport{background-color:var(--grid-bg);overflow:auto;max-height:64vh;min-height:300px;touch-action:none;overscroll-behavior:contain;scrollbar-gutter:stable both-edges;position:relative;background:linear-gradient(45deg,#f4eaff 25%,transparent 25%),linear-gradient(-45deg,#f4eaff 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#f4eaff 75%),linear-gradient(-45deg,transparent 75%,#f4eaff 75%);background-size:18px 18px;background-position:0 0,0 9px,9px -9px,-9px 0}
-#gridStage{display:grid;grid-template-columns:34px max-content;grid-template-rows:34px max-content;width:max-content;min-width:100%;transform-origin:top left;will-change:transform;position:relative;z-index:2;padding:10px}
-.rulerCorner{grid-column:1;grid-row:1;position:sticky;left:0;top:0;z-index:6;background:#ede2fb;border:1px solid var(--border);border-radius:8px 0 0 0}
-.columnRuler{grid-column:2;grid-row:1;display:grid;gap:3px;align-items:stretch;position:relative;z-index:5}
-.rowRuler{grid-column:1;grid-row:2;display:grid;gap:3px;position:relative;z-index:5}
-.rulerCell{display:flex;align-items:center;justify-content:center;min-width:28px;height:28px;font-size:10px;font-weight:800;color:#5b3a78;background:#f4ebff;border:1px solid #dbcaf1;user-select:none}
-.columnRuler .rulerCell{width:28px}
-.rowRuler .rulerCell{width:34px}
-#beadGrid{grid-column:2;grid-row:2;display:grid;gap:3px;width:max-content;transform-origin:top left;position:relative;z-index:2}
+#beadGrid{display:grid;gap:3px;padding:18px;width:max-content;min-width:100%;transform-origin:top left;will-change:transform;position:relative;z-index:2}
 .bead{width:28px;height:28px;border-radius:50%;border:1px solid rgba(0,0,0,.13);background:#f7f2ef;box-shadow:inset 0 2px 4px rgba(255,255,255,.8),0 1px 2px rgba(0,0,0,.08);touch-action:none}
 .bead.empty{background:#f4eee9;border-style:dashed;opacity:.65}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);text-align:center;padding:12px 6px}.stats div{display:grid;gap:2px}.stats strong{font-size:1rem}.stats span{font-size:.72rem;color:var(--muted)}
@@ -150,48 +143,3 @@ button{transition:transform .12s ease,box-shadow .18s ease,filter .18s ease}
   .topbarLogo{width:38px;height:38px}
   .topbar h1{font-size:1.08rem}
 }
-
-.fileActions{display:flex;gap:7px;overflow-x:auto;padding:0 0 8px}
-.fileActions button{white-space:nowrap;padding:8px 10px;font-size:.78rem}
-.toolbar button{min-width:44px}
-.toolbar button[id="exportJpegBtn"],
-.toolbar button[id="exportPdfBtn"]{font-size:.68rem;font-weight:900}
-@media(max-width:520px){
-  #gridStage{padding:7px}
-  .rulerCell{font-size:9px}
-}
-
-/* V6 — paleta flutuante e seletor por célula */
-.floatingPalette{position:fixed;left:14px;bottom:14px;width:min(520px,calc(100vw - 28px));z-index:40;margin:0;box-shadow:0 16px 38px rgba(76,29,117,.24)}
-.paletteDragHandle{cursor:grab;touch-action:none;user-select:none}.paletteDragHandle:active{cursor:grabbing}.paletteDragHandle h3 small{font-size:.68rem;color:var(--muted);font-weight:600}.paletteHeadActions{display:flex;gap:6px}.floatingPalette.collapsed #paletteColors{display:none}.floatingPalette.collapsed{width:auto;min-width:220px}.floatingPalette .paletteColors{max-width:100%;flex-wrap:wrap;max-height:160px;overflow:auto}.colorSwatch::after{content:attr(data-code);position:absolute;left:50%;bottom:-17px;transform:translateX(-50%);font-size:9px;font-weight:800;color:var(--text);white-space:nowrap}.floatingPalette .colorSwatch{margin-bottom:18px}
-.cellColorPicker{position:fixed;inset:auto 10px 10px 10px;z-index:70;max-height:72vh;overflow:auto;background:#fff;border:1px solid var(--border);border-radius:20px;padding:12px;box-shadow:0 18px 50px rgba(47,34,64,.3)}.cellPickerHead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}.cellPickerHead button{font-size:24px;padding:5px 12px;background:var(--lilac-soft)}.cellColorOptions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}.cellColorOption{display:grid;grid-template-columns:34px 1fr;gap:9px;align-items:center;text-align:left;padding:9px;background:var(--lilac-soft2);border:1px solid var(--border)}.cellColorOptionDot{width:32px;height:32px;border-radius:50%;border:1px solid rgba(0,0,0,.18)}.cellColorOption small{display:block;color:var(--muted)}
-.detectedColorsBox{margin:10px 0;padding:10px;border:1px solid var(--border);border-radius:12px;background:var(--lilac-soft2)}#detectedColorsPreview{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}.detectedChip{display:flex;align-items:center;gap:5px;font-size:.75rem}.detectedChip i{width:22px;height:22px;border-radius:50%;border:1px solid rgba(0,0,0,.15)}
-@media(max-width:520px){.cellColorOptions{grid-template-columns:1fr}.floatingPalette{bottom:8px;left:8px;width:calc(100vw - 16px)}}
-
-/* V6.1 — interface compacta, paleta abaixo da grade e modo Mão */
-.toolbar{display:block;position:sticky;top:77px;z-index:15;padding:7px;overflow:visible}
-.toolbarMain{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px}
-.toolbarMain button{min-width:0;padding:9px 2px;font-size:1.05rem}
-.moreToolsPanel{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-top:7px;padding-top:7px;border-top:1px solid var(--border)}
-.moreToolsPanel.hidden{display:none!important}
-.moreToolsPanel button{min-width:0;padding:8px 3px;font-size:.85rem}
-.fileActions{display:none}
-.inlinePalette,.floatingPalette{position:static!important;left:auto!important;top:auto!important;bottom:auto!important;width:auto!important;min-width:0!important;z-index:auto!important;margin-bottom:14px!important;box-shadow:var(--shadow)!important}
-.inlinePalette .paletteColors,.floatingPalette .paletteColors{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:10px;max-height:none!important;overflow:visible!important;padding:12px 2px 4px;min-height:0}
-.inlinePalette .colorSwatch,.floatingPalette .colorSwatch{justify-self:center;margin:0 0 18px;min-width:46px;width:46px;height:46px}
-.inlinePalette.collapsed #paletteColors,.floatingPalette.collapsed #paletteColors{display:none!important}
-.inlinePalette.collapsed,.floatingPalette.collapsed{width:auto!important;min-width:0!important}
-#gridViewport.panMode{cursor:grab}
-#gridViewport.panMode:active{cursor:grabbing}
-@media(max-width:520px){
-  .toolbar{top:70px;padding:6px}
-  .toolbarMain{grid-template-columns:repeat(8,minmax(0,1fr));gap:4px}
-  .toolbarMain button{padding:8px 1px;font-size:1rem;border-radius:10px}
-  .moreToolsPanel{grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}
-  .moreToolsPanel button{padding:7px 2px;border-radius:10px}
-  .inlinePalette .paletteColors,.floatingPalette .paletteColors{grid-template-columns:repeat(5,1fr);gap:8px}
-}
-
-/* V6.2 — seleção direta por célula */
-.cellTapHint{margin:-6px 4px 8px;text-align:center;font-size:.76rem;font-weight:700;color:var(--muted)}
-.cellColorPicker{overscroll-behavior:contain}
