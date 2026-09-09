@@ -141,10 +141,12 @@ function setupZoomGestures(){
 }
 
 function setLoomMode(on){
-  loomMode=on;
-  $("gridViewport").classList.toggle("loomMode",loomMode);
-  $("loomBtn").classList.toggle("activeTool",loomMode);
-  $("viewModeLabel").textContent=loomMode?"Modo: Tear realista":"Modo: Grade";
+  loomMode=!!on;
+  const viewport=$("gridViewport");
+  if(viewport) viewport.classList.toggle("loomMode",loomMode);
+  $("loomBtn")?.classList.toggle("activeTool",loomMode);
+  $("viewModeLabel").textContent=loomMode?"Visual: Tear":"Visual: Grade";
+  // IMPORTANTE: visualização não altera tool, selectedColor, grid, réguas ou dimensões.
 }
 
 function mirrorHorizontal(){
@@ -509,37 +511,58 @@ function newProjectData(){
 }
 
 function renderGrid(){
+  if(tool!=="standard") closeCellColorMenu?.();
   const g = $("beadGrid");
   g.innerHTML="";
   renderRulers();
   g.style.gridTemplateColumns=`repeat(${project.cols},28px)`;
+
   project.grid.forEach((row,r)=>{
     row.forEach((colorId,c)=>{
       const bead=document.createElement("button");
       bead.className="bead"+(colorId?"":" empty");
-      bead.dataset.r=r; bead.dataset.c=c;
+      bead.dataset.r=r;
+      bead.dataset.c=c;
+      bead.type="button";
+
       const color=project.palette.find(x=>x.id===colorId);
       if(color) bead.style.background=color.hex;
+
       bead.addEventListener("pointerdown",(e)=>{
         if(e.pointerType==="touch" && e.isPrimary===false) return;
         e.preventDefault();
-        if(tool==="standard") { isPointerDown=false; openCellColorMenu(r,c); return; }
+        e.stopPropagation();
+
+        // PADRÃO: somente este modo pode abrir o menu de cores.
+        if(tool==="standard"){
+          isPointerDown=false;
+          activePaintPointerId=null;
+          openCellColorMenu(r,c);
+          return;
+        }
+
+        // LÁPIS / CÉLULA / BORRACHA:
+        // nunca abrem menu e nunca alteram selectedColor.
         pushHistory();
-        applyAt(r,c);
-        isPointerDown = tool==="paint";
-        if(isPointerDown) bead.setPointerCapture?.(e.pointerId);
+        applyAt(r,c,false);
+
+        if(tool==="paint"){
+          isPointerDown=true;
+          activePaintPointerId=e.pointerId;
+          lastPaintCell=`${r}:${c}`;
+          try{ g.setPointerCapture?.(e.pointerId); }catch(_){}
+        }else{
+          isPointerDown=false;
+          activePaintPointerId=null;
+        }
       });
-      bead.addEventListener("pointerenter",()=>{
-        if(tool==="paint" && isPointerDown) applyAt(r,c,false);
-      });
-      bead.addEventListener("pointerup",()=>{isPointerDown=false});
-      bead.addEventListener("pointercancel",()=>{isPointerDown=false});
+
       g.appendChild(bead);
-    })
+    });
   });
+
   updateStats();
 }
-
 let menuCell=null;
 function openCellColorMenu(r,c){
   menuCell={r,c};
@@ -561,7 +584,44 @@ function openCellColorMenu(r,c){
 }
 function closeCellColorMenu(){ $("cellColorMenu")?.classList.add("hidden"); menuCell=null; }
 
-document.addEventListener("pointerup",()=>isPointerDown=false);
+const beadGridEl=$("beadGrid");
+
+beadGridEl.addEventListener("pointermove",(e)=>{
+  if(tool!=="paint" || !isPointerDown) return;
+  if(activePaintPointerId!==null && e.pointerId!==activePaintPointerId) return;
+  if(e.pointerType==="touch" && e.isPrimary===false) return;
+
+  e.preventDefault();
+
+  // Como a grade captura o ponteiro, localizamos a célula sob o dedo/caneta.
+  const hit=document.elementFromPoint(e.clientX,e.clientY);
+  const bead=hit?.closest?.(".bead");
+  if(!bead || !beadGridEl.contains(bead)) return;
+
+  const r=Number(bead.dataset.r);
+  const c=Number(bead.dataset.c);
+  if(!Number.isInteger(r) || !Number.isInteger(c)) return;
+
+  const key=`${r}:${c}`;
+  if(key===lastPaintCell) return;
+  lastPaintCell=key;
+  applyAt(r,c,false);
+},{passive:false});
+
+function finishPaintPointer(e){
+  if(activePaintPointerId!==null && e?.pointerId!=null && e.pointerId!==activePaintPointerId) return;
+  isPointerDown=false;
+  activePaintPointerId=null;
+  lastPaintCell=null;
+  try{
+    if(e?.pointerId!=null && beadGridEl.hasPointerCapture?.(e.pointerId)){
+      beadGridEl.releasePointerCapture(e.pointerId);
+    }
+  }catch(_){}
+}
+
+document.addEventListener("pointerup",finishPaintPointer);
+document.addEventListener("pointercancel",finishPaintPointer);
 
 function applyAt(r,c,rerender=true){
   const value = tool==="erase" ? null : selectedColor;
@@ -594,7 +654,7 @@ function renderPalette(){
     b.className="colorSwatch"+(color.id===selectedColor?" selected":"");
     b.style.background=color.hex;
     b.title=`${color.name} (${color.code})`;
-    b.onclick=()=>{selectedColor=color.id; updateToolButtons(); renderPalette()};
+    b.onclick=(e)=>{e.preventDefault();e.stopPropagation();selectedColor=color.id;renderPalette();};
     wrap.appendChild(b);
   })
 }
@@ -713,9 +773,9 @@ $("createProjectBtn").onclick=()=>{
 $("backHomeBtn").onclick=()=>{saveCurrent(); showView("homeView"); setProjectLabel()}
 $("openProjectsBtn").onclick=()=>{renderProjects(); showView("projectsView")}
 $("projectsBackBtn").onclick=()=>showView("homeView");
-$("standardToolBtn").onclick=()=>{tool="standard";isPointerDown=false;updateToolButtons();toast("Modo padrão: toque na célula para escolher a cor")}
-$("paintToolBtn").onclick=()=>{tool="paint";isPointerDown=false;updateToolButtons();toast("Modo lápis")}
-$("cellToolBtn").onclick=()=>{tool="cell";isPointerDown=false;updateToolButtons();toast("Modo célula: cor selecionada fica ativa")}
+$("standardToolBtn").onclick=()=>{finishPaintPointer();tool="standard";updateToolButtons();toast("Modo padrão: toque na célula para escolher a cor")}
+$("paintToolBtn").onclick=()=>{finishPaintPointer();closeCellColorMenu();tool="paint";updateToolButtons();toast("Modo lápis: a cor selecionada permanece fixa")}
+$("cellToolBtn").onclick=()=>{finishPaintPointer();closeCellColorMenu();tool="cell";updateToolButtons();toast("Modo célula: a cor selecionada fica ativa")}
 $("closeCellColorMenu").onclick=closeCellColorMenu;
 $("cellColorMenu").addEventListener("click",e=>{if(e.target===$("cellColorMenu"))closeCellColorMenu()});
 $("clearCellFromMenu").onclick=()=>{if(!menuCell)return; const {r,c}=menuCell; pushHistory(); project.grid[r][c]=null; if(symmetry)project.grid[r][project.cols-1-c]=null; closeCellColorMenu(); renderGrid()};
@@ -739,7 +799,7 @@ $("mirrorVBtn").onclick=mirrorVertical;
 $("zoomOutBtn").onclick=()=>applyZoom(zoomLevel-ZOOM_STEP);
 $("zoomInBtn").onclick=()=>applyZoom(zoomLevel+ZOOM_STEP);
 $("zoomResetBtn").onclick=()=>applyZoom(1);
-$("loomBtn").onclick=()=>setLoomMode(!loomMode);
+$("loomBtn").onclick=()=>{ const currentTool=tool; setLoomMode(!loomMode); tool=currentTool; updateToolButtons(); };
 
 $("saveBtn").onclick=saveCurrent;
 $("saveAsBtn").onclick=saveAsCopy;

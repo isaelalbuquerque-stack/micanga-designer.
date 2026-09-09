@@ -106,3 +106,22 @@ Observação: a conversão é aproximada. Fotos com fundo simples, boa iluminaç
 - Foto: mínimo de 2 cores.
 - Linhas e colunas manuais.
 - Opção automática para ignorar o fundo da imagem.
+
+
+## V6.3 — Modos consistentes
+- Grade e Tear usam exatamente a mesma geometria de células.
+- Réguas de linhas e colunas permanecem alinhadas em todos os modos.
+- Tear virou somente uma visualização; não muda ferramenta, cor, linhas, colunas ou edição.
+- Modos Padrão, Lápis e Célula aparecem com nome visível.
+- Padrão: abre menu de cores por célula.
+- Lápis: pinta e arrasta.
+- Célula: mantém a cor selecionada para os próximos toques.
+
+
+## V6.4 — Correção do Lápis
+- O menu de cores abre somente no modo Padrão.
+- O modo Lápis nunca abre/pisca o menu de cores.
+- A cor selecionada permanece fixa enquanto desenha.
+- Arraste do Lápis atualizado por célula, sem reconstruir a grade a cada toque.
+- Removida a troca aparente/aleatória de cores causada por eventos concorrentes.
+- Modo Célula continua aplicando a cor selecionada em cada toque.
