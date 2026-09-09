@@ -188,8 +188,9 @@
           </div>
 
           <div class="grid2">
-            <label>Largura do diagrama
+            <label>Colunas do diagrama
               <select id="imageColsInput">
+                <option value="8">8 colunas</option>
                 <option value="10">10 colunas</option>
                 <option value="12">12 colunas</option>
                 <option value="16">16 colunas</option>
@@ -198,18 +199,50 @@
                 <option value="28">28 colunas</option>
                 <option value="32">32 colunas</option>
                 <option value="40">40 colunas</option>
+                <option value="50">50 colunas</option>
+                <option value="60">60 colunas</option>
               </select>
             </label>
 
+            <label>Linhas do diagrama
+              <select id="imageRowsInput">
+                <option value="auto" selected>Automático pela imagem</option>
+                <option value="8">8 linhas</option>
+                <option value="10">10 linhas</option>
+                <option value="12">12 linhas</option>
+                <option value="16">16 linhas</option>
+                <option value="20">20 linhas</option>
+                <option value="24">24 linhas</option>
+                <option value="30">30 linhas</option>
+                <option value="35">35 linhas</option>
+                <option value="40">40 linhas</option>
+                <option value="50">50 linhas</option>
+                <option value="60">60 linhas</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="grid2">
             <label>Quantidade de cores
               <select id="imageColorsInput">
+                <option value="2">2 cores</option>
+                <option value="3">3 cores</option>
                 <option value="4">4 cores</option>
+                <option value="5">5 cores</option>
                 <option value="6">6 cores</option>
                 <option value="8">8 cores</option>
+                <option value="10">10 cores</option>
                 <option value="12" selected>12 cores</option>
                 <option value="16">16 cores</option>
                 <option value="24">24 cores</option>
                 <option value="32">32 cores</option>
+              </select>
+            </label>
+
+            <label>Modo de conversão
+              <select id="imageFidelityInput">
+                <option value="faithful" selected>Fidelidade máxima — sem vazios</option>
+                <option value="background">Detectar fundo — permite vazios</option>
               </select>
             </label>
           </div>

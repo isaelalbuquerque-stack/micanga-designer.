@@ -223,10 +223,38 @@ function applyZoom(nextZoom, focusX=null, focusY=null){
   const pct=Math.round(zoomLevel*100);
   $("zoomResetBtn").textContent=`${pct}%`;
   if($("zoomLabel")) $("zoomLabel").textContent=`Zoom ${pct}%`;
+  requestAnimationFrame(syncGridRulers);
 }
 
 function touchDistance(a,b){ return Math.hypot(b.clientX-a.clientX,b.clientY-a.clientY); }
 
+
+
+// V5.17 — trava de réguas independente de position:sticky.
+// CSS zoom pode quebrar sticky em alguns WebViews/Chrome Android; por isso
+// compensamos o scroll do viewport com translate nas réguas.
+function syncGridRulers(){
+  const viewport=$("gridViewport");
+  const col=$("columnRuler");
+  const row=$("rowRuler");
+  const corner=document.querySelector(".rulerCorner");
+  if(!viewport||!col||!row||!corner) return;
+  const z=Math.max(.01,zoomLevel||1);
+  const x=viewport.scrollLeft/z;
+  const y=viewport.scrollTop/z;
+  col.style.transform=`translateY(${y}px)`;
+  row.style.transform=`translateX(${x}px)`;
+  corner.style.transform=`translate(${x}px, ${y}px)`;
+}
+
+function setupLockedRulers(){
+  const viewport=$("gridViewport");
+  if(!viewport||viewport.dataset.rulerLockReady) return;
+  viewport.dataset.rulerLockReady="1";
+  viewport.addEventListener("scroll",syncGridRulers,{passive:true});
+  window.addEventListener("resize",syncGridRulers,{passive:true});
+  syncGridRulers();
+}
 function setupZoomGestures(){
   const viewport=$("gridViewport");
   if(!viewport||viewport.dataset.zoomReady) return;
@@ -532,31 +560,60 @@ function isBackgroundPixel(r,g,b,mode){
   return false;
 }
 
-function cellColorFromRegion(ctx, x0, y0, x1, y1, bgMode){
+function cellColorFromRegion(ctx, x0, y0, x1, y1, bgMode, faithful=false){
   const w=Math.max(1,x1-x0), h=Math.max(1,y1-y0);
   const data=ctx.getImageData(x0,y0,w,h).data;
-  const pts=[];
-  let valid=0,total=0;
-  // Amostragem distribuída dentro da célula, evitando que reflexos isolados dominem a cor.
-  const step=Math.max(1,Math.floor(Math.sqrt((w*h)/180)));
-  for(let y=0;y<h;y+=step){
-    for(let x=0;x<w;x+=step){
+
+  // Lê principalmente o miolo da célula. Em fotos de miçangas, as bordas costumam
+  // conter fundo, fio e espaço entre contas; isso não deve decidir a cor da célula.
+  const insetX=Math.floor(w*.16), insetY=Math.floor(h*.16);
+  const sx0=Math.min(w-1,insetX), sy0=Math.min(h-1,insetY);
+  const sx1=Math.max(sx0+1,w-insetX), sy1=Math.max(sy0+1,h-insetY);
+  const step=Math.max(1,Math.floor(Math.sqrt((w*h)/260)));
+  const buckets=new Map();
+  let validWeight=0,totalWeight=0;
+
+  for(let y=sy0;y<sy1;y+=step){
+    for(let x=sx0;x<sx1;x+=step){
       const i=(y*w+x)*4;
       const r=data[i],g=data[i+1],b=data[i+2],a=data[i+3];
-      total++;
-      if(a<90 || isBackgroundPixel(r,g,b,bgMode)) continue;
-      valid++;
-      pts.push([r,g,b]);
+      const nx=(x+.5)/w-.5, ny=(y+.5)/h-.5;
+      // Peso maior no centro da célula.
+      const centerWeight=Math.max(.25,1-Math.sqrt(nx*nx+ny*ny)*1.25);
+      totalWeight+=centerWeight;
+      if(a<70) continue;
+      const isBg=!faithful && isBackgroundPixel(r,g,b,bgMode);
+      if(isBg) continue;
+      validWeight+=centerWeight;
+
+      // Histograma quantizado: escolhe a família de cor dominante, em vez de uma
+      // média que mistura azul+branco, vermelho+preto etc.
+      const qr=Math.round(r/24)*24, qg=Math.round(g/24)*24, qb=Math.round(b/24)*24;
+      const key=`${qr},${qg},${qb}`;
+      const item=buckets.get(key)||{w:0,r:0,g:0,b:0};
+      item.w+=centerWeight;
+      item.r+=r*centerWeight; item.g+=g*centerWeight; item.b+=b*centerWeight;
+      buckets.set(key,item);
     }
   }
-  if(!pts.length) return {coverage:0,rgb:null};
 
-  // Mediana por canal: mantém a cor da miçanga e reduz influência de brilho/sombra da foto.
-  const rs=pts.map(v=>v[0]).sort((a,b)=>a-b);
-  const gs=pts.map(v=>v[1]).sort((a,b)=>a-b);
-  const bs=pts.map(v=>v[2]).sort((a,b)=>a-b);
-  const mid=Math.floor(pts.length/2);
-  return {coverage:valid/Math.max(1,total),rgb:[rs[mid],gs[mid],bs[mid]]};
+  if(!buckets.size){
+    // No modo fiel, uma célula nunca deve desaparecer. Usa o pixel central como fallback.
+    if(faithful){
+      const cx=Math.max(0,Math.min(w-1,Math.floor(w/2)));
+      const cy=Math.max(0,Math.min(h-1,Math.floor(h/2)));
+      const i=(cy*w+cx)*4;
+      return {coverage:1,rgb:[data[i],data[i+1],data[i+2]]};
+    }
+    return {coverage:0,rgb:null};
+  }
+
+  let best=null;
+  for(const item of buckets.values()) if(!best || item.w>best.w) best=item;
+  return {
+    coverage:faithful ? 1 : validWeight/Math.max(.001,totalWeight),
+    rgb:[Math.round(best.r/best.w),Math.round(best.g/best.w),Math.round(best.b/best.w)]
+  };
 }
 
 function kmeansPalette(samples,maxColors){
@@ -647,16 +704,18 @@ async function generateProjectFromImage(){
     return;
   }
 
-  const cols = Number($("imageColsInput").value)||20;
-  const maxColors = Number($("imageColorsInput").value)||12;
-  const bgMode = $("backgroundModeInput").value;
-  const sensitivity = Number($("imageSensitivityInput")?.value)||0.10;
-  const name = $("imageProjectName").value.trim() || "Brinco convertido";
+  const cols=Math.max(2,Math.min(100,Number($("imageColsInput").value)||20));
+  const rowsChoice=$("imageRowsInput")?.value||"auto";
+  const maxColors=Math.max(2,Math.min(32,Number($("imageColorsInput").value)||12));
+  const bgMode=$("backgroundModeInput").value;
+  const fidelityMode=$("imageFidelityInput")?.value||"faithful";
+  const faithful=fidelityMode==="faithful";
+  const sensitivity=Number($("imageSensitivityInput")?.value)||0.10;
+  const name=$("imageProjectName").value.trim()||"Brinco convertido";
 
   const canvas=$("imageProcessCanvas");
   const ctx=canvas.getContext("2d",{willReadFrequently:true});
-
-  const maxSide=1000;
+  const maxSide=1400;
   const scale=Math.min(1,maxSide/Math.max(uploadedImage.naturalWidth,uploadedImage.naturalHeight));
   canvas.width=Math.max(1,Math.round(uploadedImage.naturalWidth*scale));
   canvas.height=Math.max(1,Math.round(uploadedImage.naturalHeight*scale));
@@ -664,11 +723,16 @@ async function generateProjectFromImage(){
   ctx.imageSmoothingQuality="high";
   ctx.drawImage(uploadedImage,0,0,canvas.width,canvas.height);
 
-  const crop=cropTransparentBounds(ctx,canvas.width,canvas.height,bgMode);
+  // Em fidelidade máxima preservamos toda a imagem. Ao detectar fundo, recortamos
+  // apenas o conteúdo útil para evitar bordas externas virarem linhas/colunas extras.
+  const crop=faithful
+    ? {x:0,y:0,w:canvas.width,h:canvas.height}
+    : cropTransparentBounds(ctx,canvas.width,canvas.height,bgMode);
   const aspect=crop.h/crop.w;
-  const rows=Math.max(2,Math.min(100,Math.round(cols*aspect)));
+  const rows=rowsChoice==="auto"
+    ? Math.max(2,Math.min(100,Math.round(cols*aspect)))
+    : Math.max(2,Math.min(100,Number(rowsChoice)||Math.round(cols*aspect)));
 
-  // Analisa cada célula diretamente na imagem original, sem reduzir tudo a 1 pixel.
   const cells=[];
   const useful=[];
   for(let y=0;y<rows;y++){
@@ -678,16 +742,16 @@ async function generateProjectFromImage(){
       const x1=Math.max(x0+1,Math.floor(crop.x+((x+1)/cols)*crop.w));
       const y0=Math.floor(crop.y+(y/rows)*crop.h);
       const y1=Math.max(y0+1,Math.floor(crop.y+((y+1)/rows)*crop.h));
-      const info=cellColorFromRegion(ctx,x0,y0,x1,y1,bgMode);
+      const info=cellColorFromRegion(ctx,x0,y0,x1,y1,bgMode,faithful);
       row.push(info);
-      if(info.rgb && info.coverage>=sensitivity) useful.push(info);
+      if(info.rgb && (faithful || info.coverage>=sensitivity)) useful.push(info);
     }
     cells.push(row);
   }
 
   const imgPalette=kmeansPalette(useful,maxColors);
   if(!imgPalette.length){
-    toast("Não consegui identificar cores úteis. Tente 'Não remover fundo' ou maior sensibilidade.");
+    toast("Não consegui identificar as cores da imagem. Tente Fidelidade máxima.");
     return;
   }
 
@@ -695,42 +759,29 @@ async function generateProjectFromImage(){
   for(let y=0;y<rows;y++){
     for(let x=0;x<cols;x++){
       const info=cells[y][x];
-      // Só fica vazia quando realmente há pouco conteúdo naquela célula.
-      if(!info.rgb || info.coverage<sensitivity) continue;
+      if(!info.rgb) continue;
+      if(!faithful && info.coverage<sensitivity) continue;
       grid[y][x]=nearestPaletteId(...info.rgb,imgPalette);
     }
   }
 
   project={
-    id:uid(),
-    name,
-    rows,cols,
-    beadSize:3,
-    technique:"Grade reta",
-    palette:imgPalette.map(({rgb,...rest})=>rest),
-    grid,
-    createdAt:new Date().toISOString(),
-    updatedAt:new Date().toISOString(),
-    source:"image"
+    id:uid(),name,rows,cols,beadSize:3,technique:"Grade reta",
+    palette:imgPalette.map(({rgb,...rest})=>rest),grid,
+    createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),
+    source:"image",captureMode:fidelityMode
   };
 
   selectedColor=project.palette[0].id;
-  tool="paint";
-  symmetry=false;
-  undoStack=[];
-  redoStack=[];
-  zoomLevel=1;
-  setProjectLabel();
-  renderPalette();
+  tool="paint"; symmetry=false; undoStack=[]; redoStack=[]; zoomLevel=1;
+  setProjectLabel(); renderPalette();
   $("editorPaletteBar")?.classList.remove("paletteCollapsed");
   $("paletteBtn")?.classList.add("activeTool");
-  updateToolButtons();
-  renderGrid();
-  showView("editorView");
+  updateToolButtons(); renderGrid(); showView("editorView");
   if(typeof setupZoomGestures==="function") setupZoomGestures();
   if(typeof applyZoom==="function") applyZoom(1);
   if(typeof setLoomMode==="function") setLoomMode(false);
-  toast(`Diagrama criado: ${project.palette.length} cores detectadas`);
+  toast(`Diagrama ${rows}×${cols}: ${project.palette.length} cores detectadas`);
 }
 
 
@@ -982,7 +1033,7 @@ function openProject(p){
   tool="paint"; symmetry=false; undoStack=[]; redoStack=[];
   zoomLevel=1; setProjectLabel(); renderPalette();
   $("editorPaletteBar")?.classList.remove("paletteCollapsed");
-  $("paletteBtn")?.classList.add("activeTool"); updateToolButtons(); renderGrid(); showView("editorView"); setupZoomGestures(); applyZoom(1); setLoomMode(project.technique==="Tear");
+  $("paletteBtn")?.classList.add("activeTool"); updateToolButtons(); renderGrid(); showView("editorView"); setupZoomGestures(); setupLockedRulers(); applyZoom(1); setLoomMode(project.technique==="Tear");
 }
 
 function renderProjects(){
@@ -1061,7 +1112,7 @@ $("createProjectBtn").onclick=()=>{
   project=newProjectData(); selectedColor=project.palette[0].id; undoStack=[]; redoStack=[];
   zoomLevel=1; setProjectLabel(); renderPalette();
   $("editorPaletteBar")?.classList.remove("paletteCollapsed");
-  $("paletteBtn")?.classList.add("activeTool"); updateToolButtons(); renderGrid(); showView("editorView"); setupZoomGestures(); applyZoom(1); setLoomMode(project.technique==="Tear");
+  $("paletteBtn")?.classList.add("activeTool"); updateToolButtons(); renderGrid(); showView("editorView"); setupZoomGestures(); setupLockedRulers(); applyZoom(1); setLoomMode(project.technique==="Tear");
 }
 $("backHomeBtn").onclick=()=>{saveCurrent(); showView("homeView"); setProjectLabel()}
 $("paletteBtn").onclick=()=>{

@@ -221,3 +221,18 @@ A associação direta do arquivo `.jpm` depende do suporte do navegador/sistema 
 - Mantida a personalização de linhas, colunas, tamanho da miçanga e quantidade de cores.
 - Barra de botões e paleta permanecem travadas acima da área de edição.
 - Tabela permanece contida no visor e as réguas horizontal, vertical e canto ficam sticky durante a movimentação.
+
+## V5.16 — Captura profissional de diagramas
+- Quantidade mínima de cores reduzida de 4 para 2 (inclui 2, 3 e 5 cores).
+- Linhas e colunas podem ser definidas separadamente; linhas também podem ficar automáticas.
+- Novo modo Fidelidade máxima: preenche todas as células e evita buracos no diagrama.
+- Novo modo Detectar fundo: permite células vazias somente quando o fundo é realmente identificado.
+- Leitura de cor prioriza o centro de cada célula e usa cor dominante quantizada, reduzindo mistura com espaços, fios, reflexos e fundo.
+- Maior resolução interna de processamento para preservar detalhes da imagem original.
+
+
+## V5.17 — Bloqueio robusto do editor
+- Barras de ferramentas e paleta reforçadas com sticky e z-index próprios.
+- Tabela recortada no viewport para nunca sobrepor as barras.
+- Réguas horizontal e vertical travadas por compensação de scroll em JavaScript, evitando falhas do CSS sticky com zoom no Chrome/Android.
+- Mantidas todas as melhorias de captura profissional da V5.16.
