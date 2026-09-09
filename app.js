@@ -63,6 +63,9 @@ let undoStack = [];
 let redoStack = [];
 let selectedRows = new Set();
 let selectedCols = new Set();
+let colDragSelecting=false;
+let colDragMode="add";
+let colDragVisited=new Set();
 let areaSelection = null;
 let areaAnchor = null;
 let isPointerDown = false;
@@ -347,8 +350,10 @@ function renderRulers(){
     const el=document.createElement("button"); el.type="button";
     el.className="rulerCell colSelectCell"+(selectedCols.has(c)?" selectedColRuler":"");
     el.textContent=columnLabel(c); el.title=`Selecionar coluna ${columnLabel(c)}`;
+    el.dataset.colIndex=String(c);
     el.setAttribute("aria-pressed",selectedCols.has(c)?"true":"false");
-    el.onclick=(e)=>{e.preventDefault();e.stopPropagation();toggleColSelection(c)}; cols.appendChild(el);
+    el.onkeydown=(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();toggleColSelection(c)}};
+    cols.appendChild(el);
   }
   for(let r=0;r<project.rows;r++){
     const el=document.createElement("button");
@@ -362,6 +367,7 @@ function renderRulers(){
   }
   updateRowSelectionBar();
   updateColSelectionBar();
+  setupColumnDragSelection();
 }
 // V5.19 — seleção de múltiplas linhas pela régua + preenchimento estilo Excel.
 function toggleRowSelection(r){
@@ -424,11 +430,13 @@ function copySelectedRows(direction){
   toast(`Linhas copiadas para ${direction==="down"?"baixo":"cima"}`);
 }
 
-// V5.20 — colunas, seleção de área e edição avançada.
+// V5.21 — colunas com seleção por toque/arraste + edição avançada.
 function toggleColSelection(c){
   if(!project||c<0||c>=project.cols)return;
   if(selectedCols.has(c)) selectedCols.delete(c); else selectedCols.add(c);
   renderGrid();
+  const n=selectedCols.size;
+  toast(n?`${n} coluna${n>1?"s":""} selecionada${n>1?"s":""} — use ← Copiar ou → Copiar`:"Seleção de colunas limpa");
 }
 function clearColSelection(){selectedCols.clear();renderGrid()}
 function updateColSelectionBar(){
@@ -436,7 +444,7 @@ function updateColSelectionBar(){
   const n=selectedCols.size; count.textContent=n?`${n} coluna${n>1?"s":""}`:"Nenhuma coluna"; bar.classList.toggle("active",n>0);
   ["copyColsLeftBtn","copyColsRightBtn","deleteColsBtn"].forEach(id=>{if($(id))$(id).disabled=!n});
 }
-function colRepeatCount(){return Math.max(1,Math.min(99,Number($("colCopyRepeat")?.value)||1))}
+function colRepeatCount(){return Math.max(1,Math.min(999,Number($("colCopyRepeat")?.value)||1))}
 function copySelectedCols(direction){
   if(!project||!selectedCols.size)return; const inds=[...selectedCols].sort((a,b)=>a-b); const reps=colRepeatCount();
   const pattern=inds.map(c=>project.grid.map(row=>row[c])); const block=[]; for(let k=0;k<reps;k++) pattern.forEach(col=>block.push(col.slice()));
@@ -449,6 +457,49 @@ function copySelectedCols(direction){
   }
   block.forEach((col,j)=>col.forEach((v,r)=>project.grid[r][start+j]=v)); selectedCols=new Set(block.map((_,j)=>start+j)); renderGrid();saveCurrent();toast(`Colunas copiadas para ${direction==="right"?"direita":"esquerda"}`)
 }
+// V5.21 — seleção profissional de colunas por toque e arraste na régua.
+function columnIndexFromPoint(clientX,clientY){
+  const el=document.elementFromPoint(clientX,clientY)?.closest?.(".colSelectCell");
+  if(!el||!$("columnRuler")?.contains(el)) return null;
+  const c=Number(el.dataset.colIndex);
+  return Number.isInteger(c)?c:null;
+}
+function setupColumnDragSelection(){
+  const ruler=$("columnRuler");
+  if(!ruler||ruler.dataset.colDragReady) return;
+  ruler.dataset.colDragReady="1";
+  ruler.addEventListener("pointerdown",e=>{
+    const cell=e.target.closest?.(".colSelectCell");
+    if(!cell) return;
+    const c=Number(cell.dataset.colIndex);
+    if(!Number.isInteger(c)) return;
+    e.preventDefault(); e.stopPropagation();
+    colDragSelecting=true; colDragVisited=new Set([c]);
+    colDragMode=selectedCols.has(c)?"remove":"add";
+    if(colDragMode==="add") selectedCols.add(c); else selectedCols.delete(c);
+    try{ruler.setPointerCapture(e.pointerId)}catch(_){ }
+    renderGrid();
+  });
+  ruler.addEventListener("pointermove",e=>{
+    if(!colDragSelecting) return;
+    const c=columnIndexFromPoint(e.clientX,e.clientY);
+    if(c===null||colDragVisited.has(c)) return;
+    colDragVisited.add(c);
+    if(colDragMode==="add") selectedCols.add(c); else selectedCols.delete(c);
+    renderGrid();
+  });
+  const finish=e=>{
+    if(!colDragSelecting) return;
+    colDragSelecting=false;
+    try{ruler.releasePointerCapture(e.pointerId)}catch(_){ }
+    const n=selectedCols.size;
+    updateColSelectionBar();
+    toast(n?`${n} coluna${n>1?"s":""} selecionada${n>1?"s":""} — escolha ← Copiar ou → Copiar`:"Seleção de colunas limpa");
+  };
+  ruler.addEventListener("pointerup",finish);
+  ruler.addEventListener("pointercancel",finish);
+}
+
 function insertRow(where){if(!project)return;pushHistory();const inds=[...selectedRows].sort((a,b)=>a-b);let at=inds.length?(where==="above"?inds[0]:inds.at(-1)+1):project.rows;project.grid.splice(at,0,Array(project.cols).fill(null));project.rows++;selectedRows=new Set([at]);renderGrid();saveCurrent()}
 function deleteSelectedRows(){if(!selectedRows.size||project.rows-selectedRows.size<1)return;pushHistory();project.grid=project.grid.filter((_,r)=>!selectedRows.has(r));project.rows=project.grid.length;selectedRows.clear();renderGrid();saveCurrent()}
 function insertCol(where){if(!project)return;pushHistory();const inds=[...selectedCols].sort((a,b)=>a-b);let at=inds.length?(where==="left"?inds[0]:inds.at(-1)+1):project.cols;project.grid.forEach(r=>r.splice(at,0,null));project.cols++;selectedCols=new Set([at]);renderGrid();saveCurrent()}

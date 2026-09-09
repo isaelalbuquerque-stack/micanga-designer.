@@ -875,3 +875,37 @@ button{transition:transform .12s ease,box-shadow .18s ease,filter .18s ease}
 #beadGrid .bead.selectedAreaBead{outline:3px solid rgba(245,158,11,.8)!important;outline-offset:-3px;filter:brightness(1.04)}
 .areaSelectionBar{background:#fff8e8}
 @media(max-width:520px){.editorPaletteBar .colorSwatch{min-width:28px!important;width:28px!important;height:28px!important;flex-basis:28px!important}.areaSelectionBar{overflow-x:auto;flex-wrap:nowrap}.areaSelectionBar .rowSelectionInfo{min-width:180px;width:auto}}
+
+
+/* =========================================================
+   V5.21 — seleção de colunas realmente utilizável no celular
+   ========================================================= */
+.colSelectionBar{
+  border:1px solid #c4b5fd!important;
+  background:#f5f0ff!important;
+  box-shadow:0 2px 7px rgba(91,51,128,.10);
+}
+.colSelectionBar.active{
+  border-color:#7c3aed!important;
+  background:#efe7ff!important;
+}
+.columnRuler{touch-action:pan-y!important}
+.colSelectCell{
+  touch-action:none!important;
+  -webkit-tap-highlight-color:transparent;
+  position:relative;
+}
+.colSelectCell.selectedColRuler::after{
+  content:"✓";
+  position:absolute;
+  right:1px;
+  bottom:-1px;
+  font-size:8px;
+  line-height:1;
+  color:#fff;
+}
+@media(max-width:520px){
+  .colSelectionBar{overflow-x:auto;flex-wrap:nowrap!important;scrollbar-width:thin}
+  .colSelectionBar .rowSelectionInfo{min-width:150px;width:auto!important;flex:0 0 auto}
+  .colSelectionBar button{white-space:nowrap;flex:0 0 auto}
+}

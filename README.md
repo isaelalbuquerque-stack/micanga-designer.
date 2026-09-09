@@ -261,3 +261,12 @@ A associação direta do arquivo `.jpm` depende do suporte do navegador/sistema 
 - Centralização automática do desenho e contorno automático com a cor ativa.
 - Paleta do editor redesenhada com círculos perfeitamente simétricos.
 - Mantidos bloqueios de barras/réguas, captura profissional e recursos anteriores.
+
+
+## V5.21
+- Corrigida de verdade a seleção de colunas pela régua alfabética.
+- Toque em A, B, C... ou arraste sobre várias letras para selecionar múltiplas colunas.
+- Colunas selecionadas ficam destacadas com marca de confirmação.
+- Copiar para esquerda/direita com repetição até 999 e expansão automática da grade.
+- Barra contextual de colunas mais visível no celular.
+- Mantidas todas as funções da V5.20.
