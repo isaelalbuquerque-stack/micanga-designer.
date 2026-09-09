@@ -117,7 +117,7 @@ function setupZoomGestures(){
       e.preventDefault();
       pinchStartDistance=touchDistance(e.touches[0],e.touches[1]);
       pinchStartZoom=zoomLevel;
-    }else if(e.touches.length===1 && zoomLevel>1){
+    }else if(e.touches.length===1 && tool==="pan"){
       panStart={x:e.touches[0].clientX,y:e.touches[0].clientY,left:viewport.scrollLeft,top:viewport.scrollTop};
     }
   },{passive:false});
@@ -129,7 +129,7 @@ function setupZoomGestures(){
       const cy=((e.touches[0].clientY+e.touches[1].clientY)/2)-rect.top;
       const d=touchDistance(e.touches[0],e.touches[1]);
       applyZoom(pinchStartZoom*(d/pinchStartDistance),cx,cy);
-    }else if(e.touches.length===1 && panStart && zoomLevel>1){
+    }else if(e.touches.length===1 && panStart && tool==="pan"){
       e.preventDefault();
       const t=e.touches[0];
       viewport.scrollLeft=panStart.left-(t.clientX-panStart.x);
@@ -140,6 +140,21 @@ function setupZoomGestures(){
     if(e.touches.length<2) pinchStartDistance=0;
     if(e.touches.length===0) panStart=null;
   });
+  let pointerPan=null;
+  viewport.addEventListener("pointerdown",(e)=>{
+    if(tool!=="pan" || e.pointerType==="touch") return;
+    e.preventDefault();
+    pointerPan={x:e.clientX,y:e.clientY,left:viewport.scrollLeft,top:viewport.scrollTop};
+    viewport.setPointerCapture?.(e.pointerId);
+  });
+  viewport.addEventListener("pointermove",(e)=>{
+    if(!pointerPan || tool!=="pan") return;
+    viewport.scrollLeft=pointerPan.left-(e.clientX-pointerPan.x);
+    viewport.scrollTop=pointerPan.top-(e.clientY-pointerPan.y);
+  });
+  const endPointerPan=()=>pointerPan=null;
+  viewport.addEventListener("pointerup",endPointerPan);
+  viewport.addEventListener("pointercancel",endPointerPan);
 }
 
 function setLoomMode(on){
@@ -654,6 +669,7 @@ function renderGrid(){
       const color=project.palette.find(x=>x.id===colorId);
       if(color) bead.style.background=color.hex;
       bead.addEventListener("pointerdown",(e)=>{
+        if(tool==="pan") return;
         e.preventDefault();
 
         // Célula já colorida: não sobrescreve direto.
@@ -671,7 +687,7 @@ function renderGrid(){
         bead.setPointerCapture?.(e.pointerId);
       });
       bead.addEventListener("pointerenter",()=>{
-        if(isPointerDown) applyAt(r,c,false);
+        if(isPointerDown && tool!=="pan") applyAt(r,c,false);
       });
       bead.addEventListener("pointerup",()=>{isPointerDown=false});
       bead.addEventListener("pointercancel",()=>{isPointerDown=false});
@@ -722,6 +738,8 @@ function renderPalette(){
 function updateToolButtons(){
   $("paintToolBtn").classList.toggle("activeTool",tool==="paint");
   $("eraseToolBtn").classList.toggle("activeTool",tool==="erase");
+  $("panToolBtn")?.classList.toggle("activeTool",tool==="pan");
+  $("gridViewport")?.classList.toggle("panMode",tool==="pan");
   $("symmetryBtn").classList.toggle("activeTool",symmetry);
 }
 
@@ -847,6 +865,7 @@ $("openProjectsBtn").onclick=()=>{renderProjects(); showView("projectsView")}
 $("projectsBackBtn").onclick=()=>showView("homeView");
 $("paintToolBtn").onclick=()=>{tool="paint";updateToolButtons()}
 $("eraseToolBtn").onclick=()=>{tool="erase";updateToolButtons()}
+$("panToolBtn").onclick=()=>{tool="pan";updateToolButtons();toast("Mão ativada: arraste a tabela") }
 $("symmetryBtn").onclick=()=>{symmetry=!symmetry;updateToolButtons();toast(symmetry?"Simetria ligada":"Simetria desligada")}
 $("undoBtn").onclick=()=>{
   if(!project||!undoStack.length)return;

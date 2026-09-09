@@ -168,3 +168,11 @@ A associação direta do arquivo `.jpm` depende do suporte do navegador/sistema 
 - Linhas e colunas totalmente vazias ao redor do modelo são removidas automaticamente.
 - A numeração do arquivo exportado reinicia em 1 e A dentro da área recortada.
 - Mantém o fundo e o efeito visual das miçangas da V5.7.
+
+
+## Atualização V5.9
+- Editor ocupa uma área fixa da tela e a grade não se sobrepõe às barras.
+- Barra de ferramentas e paleta permanecem fora da rolagem da tabela.
+- Nova ferramenta ✋ Mão para arrastar a tabela livremente.
+- Réguas continuam dentro do visor com comportamento sticky.
+- Pinça de dois dedos continua controlando o zoom.

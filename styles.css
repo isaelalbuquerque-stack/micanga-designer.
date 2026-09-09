@@ -527,3 +527,56 @@ button{transition:transform .12s ease,box-shadow .18s ease,filter .18s ease}
   .editorView .toolbar{top:77px}
   .editorPaletteBar{top:137px}
 }
+
+
+/* =========================================================
+   V5.9 — editor travado + ferramenta Mão
+   ========================================================= */
+.editorView.active{
+  height:calc(100dvh - 69px);
+  max-height:calc(100dvh - 69px);
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.editorView .toolbar{
+  position:relative !important;
+  top:auto !important;
+  flex:0 0 auto;
+  z-index:50;
+  margin:0;
+}
+.editorView .editorPaletteBar{
+  position:relative !important;
+  top:auto !important;
+  flex:0 0 auto;
+  z-index:49;
+  margin:0;
+}
+.editorView .canvasCard{
+  flex:1 1 auto;
+  min-height:0;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  margin:0;
+}
+.editorView .canvasTop,
+.editorView .fileActions{flex:0 0 auto}
+.editorView #gridViewport{
+  flex:1 1 auto;
+  min-height:0;
+  max-height:none !important;
+  overflow:auto;
+  overscroll-behavior:contain;
+  position:relative;
+  z-index:1;
+}
+.editorView .stats{display:none}
+#gridViewport.panMode{cursor:grab;touch-action:none}
+#gridViewport.panMode:active{cursor:grabbing}
+#gridViewport.panMode .bead{pointer-events:none}
+@media(min-width:521px){
+  .editorView.active{height:calc(100dvh - 77px);max-height:calc(100dvh - 77px)}
+}
