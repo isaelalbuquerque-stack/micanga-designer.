@@ -1,3 +1,22 @@
+# V5.30 — Geometria das miçangas
+
+- Mantido o recorte livre: tudo fora do contorno manual é ignorado.
+- A captura vermelho/branco agora analisa o **miolo arredondado** de cada posição esperada da miçanga.
+- Bordas e pequenos vazios/cruzamentos entre quatro contas ajudam a separar miçangas de fios e fechamentos.
+- A análise usa resolução interna maior (até 2400 px no modo de miçangas) para preservar detalhes.
+- Pontos isolados sem vizinhos no espaçamento esperado são filtrados e pequenas lacunas alinhadas podem ser reconstruídas.
+- Branco continua fixado em `#FFFFFF`.
+- Cache do PWA atualizado para V5.30.
+
+# V5.29 — Recorte livre e geometria orientada pela peça
+
+- A tela Imagem → Diagrama ganhou ferramenta **Recorte livre** diretamente sobre a prévia da câmera/galeria.
+- O usuário contorna a peça com o dedo e o algoritmo ignora tudo que estiver fora desse polígono.
+- O contorno manual passa a definir a área geométrica primária antes da leitura das miçangas.
+- Em linhas automáticas, a proporção da área recortada orienta o número de linhas.
+- Mantidas as opções de 31×61, cores reais, leitura vermelho/branco e correção manual no editor.
+- Cache do PWA atualizado para V5.29.
+
 # V5.28 — Leitura de miçangas vermelhas e brancas
 
 - Modo padrão específico para miçangas vermelhas e brancas, baseado nas fotos da peça sobre fundo preto e claro.

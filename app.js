@@ -79,6 +79,10 @@ let pinchStartZoom = 1;
 let panStart = null;
 let loomMode = false;
 let uploadedImage = null;
+let imageCropPoints = [];
+let imageCropHistory = [];
+let imageCropDrawing = false;
+let imageCropActive = false;
 
 
 const READY_TEMPLATES = [
@@ -899,6 +903,81 @@ function lockDetectedColorsToRealPalette(imagePalette){
   return imagePalette;
 }
 
+
+
+// =========================================================
+// V5.30 — recorte livre + leitura geométrica das miçangas
+// =========================================================
+function resetFreeCrop(){
+  imageCropPoints=[]; imageCropHistory=[]; imageCropDrawing=false; imageCropActive=false;
+  const stage=$("imageCropStage"),canvas=$("imageCropCanvas"),btn=$("freeCropBtn"),guide=$("cropGuideText");
+  stage?.classList.remove("cropActive"); btn?.classList.remove("activeTool");
+  if(canvas){const ctx=canvas.getContext("2d");ctx.clearRect(0,0,canvas.width,canvas.height)}
+  if($("undoCropBtn")) $("undoCropBtn").disabled=true;
+  if($("clearCropBtn")) $("clearCropBtn").disabled=true;
+  if(guide){guide.classList.remove("ready");guide.textContent="Contorne somente a peça com o dedo. O algoritmo usará esse contorno para definir a geometria do desenho."}
+}
+
+function syncCropCanvasSize(){
+  const img=$("imagePreview"),canvas=$("imageCropCanvas"); if(!img||!canvas)return;
+  const rect=img.getBoundingClientRect();
+  const w=Math.max(1,Math.round(rect.width)),h=Math.max(1,Math.round(rect.height));
+  if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;drawFreeCrop()}
+}
+
+function drawFreeCrop(){
+  const canvas=$("imageCropCanvas"); if(!canvas)return; const ctx=canvas.getContext("2d");
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if(imageCropPoints.length<2)return;
+  ctx.save();
+  ctx.lineWidth=3;ctx.lineJoin="round";ctx.lineCap="round";ctx.strokeStyle="#8b5cf6";ctx.fillStyle="rgba(139,92,246,.16)";
+  ctx.beginPath();ctx.moveTo(imageCropPoints[0].x*canvas.width,imageCropPoints[0].y*canvas.height);
+  imageCropPoints.slice(1).forEach(p=>ctx.lineTo(p.x*canvas.width,p.y*canvas.height));
+  if(!imageCropDrawing&&imageCropPoints.length>2){ctx.closePath();ctx.fill()}
+  ctx.stroke();ctx.restore();
+}
+
+function cropPointFromEvent(e){
+  const canvas=$("imageCropCanvas"),rect=canvas.getBoundingClientRect();
+  return {x:Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width)),y:Math.max(0,Math.min(1,(e.clientY-rect.top)/rect.height))};
+}
+
+function finishFreeCrop(){
+  imageCropDrawing=false;
+  if(imageCropPoints.length<3){imageCropPoints=[];drawFreeCrop();return}
+  // reduz pontos quase coincidentes para deixar o polígono mais estável
+  const reduced=[imageCropPoints[0]];
+  for(const p of imageCropPoints.slice(1)){const q=reduced.at(-1);if(Math.hypot(p.x-q.x,p.y-q.y)>.006)reduced.push(p)}
+  imageCropPoints=reduced;drawFreeCrop();
+  if($("undoCropBtn")) $("undoCropBtn").disabled=false;
+  if($("clearCropBtn")) $("clearCropBtn").disabled=false;
+  const guide=$("cropGuideText");if(guide){guide.classList.add("ready");guide.textContent="Recorte definido. O algoritmo analisará somente esta área e calculará a geometria da peça."}
+  toast("Recorte livre definido");
+}
+
+function setupFreeCrop(){
+  const canvas=$("imageCropCanvas"); if(!canvas||canvas.dataset.ready)return; canvas.dataset.ready="1";
+  const begin=e=>{if(!imageCropActive)return;e.preventDefault();syncCropCanvasSize();imageCropHistory.push(imageCropPoints.slice());imageCropPoints=[cropPointFromEvent(e)];imageCropDrawing=true;try{canvas.setPointerCapture(e.pointerId)}catch(_){}};
+  const move=e=>{if(!imageCropActive||!imageCropDrawing)return;e.preventDefault();imageCropPoints.push(cropPointFromEvent(e));drawFreeCrop()};
+  const end=e=>{if(!imageCropDrawing)return;e.preventDefault();try{canvas.releasePointerCapture(e.pointerId)}catch(_){}finishFreeCrop()};
+  canvas.addEventListener("pointerdown",begin);canvas.addEventListener("pointermove",move);canvas.addEventListener("pointerup",end);canvas.addEventListener("pointercancel",end);
+}
+
+function manualCropBounds(canvasW,canvasH){
+  if(imageCropPoints.length<3)return null;
+  const xs=imageCropPoints.map(p=>p.x*canvasW),ys=imageCropPoints.map(p=>p.y*canvasH);
+  const minX=Math.max(0,Math.floor(Math.min(...xs))),maxX=Math.min(canvasW-1,Math.ceil(Math.max(...xs)));
+  const minY=Math.max(0,Math.floor(Math.min(...ys))),maxY=Math.min(canvasH-1,Math.ceil(Math.max(...ys)));
+  return {x:minX,y:minY,w:Math.max(1,maxX-minX+1),h:Math.max(1,maxY-minY+1)};
+}
+
+function applyManualCropMask(ctx,w,h){
+  if(imageCropPoints.length<3)return false;
+  ctx.save();ctx.globalCompositeOperation="destination-in";ctx.beginPath();
+  ctx.moveTo(imageCropPoints[0].x*w,imageCropPoints[0].y*h);
+  imageCropPoints.slice(1).forEach(p=>ctx.lineTo(p.x*w,p.y*h));ctx.closePath();ctx.fillStyle="#000";ctx.fill();ctx.restore();return true;
+}
+
 function cropTransparentBounds(ctx,w,h,bgMode){
   const data=ctx.getImageData(0,0,w,h).data;
   const border=borderBackgroundColor(ctx,w,h);
@@ -955,6 +1034,57 @@ function redBeadBounds(ctx,w,h){
   left=Math.max(0,left-padX);right=Math.min(w-1,right+padX);
   top=Math.max(0,top-padY);bottom=Math.min(h-1,bottom+padY);
   return {x:left,y:top,w:right-left+1,h:bottom-top+1};
+}
+
+function convertGeometricTwoColorBeads(ctx,crop,cols,rows){
+  const pixels=ctx.getImageData(0,0,ctx.canvas.width,ctx.canvas.height).data;
+  const W=ctx.canvas.width,H=ctx.canvas.height;
+  const grid=Array.from({length:rows},()=>Array(cols).fill(null));
+  const confidence=Array.from({length:rows},()=>Array(cols).fill(0));
+  const rx=Math.max(2,crop.w/cols*.34), ry=Math.max(2,crop.h/rows*.34);
+  const step=Math.max(1,Math.floor(Math.min(rx,ry)/4));
+
+  // Cada célula é validada principalmente pelo miolo arredondado da conta.
+  // As bordas/cantos (onde aparecem os "X" entre quatro contas) pesam contra
+  // falsos positivos de fios, fundo e fechamentos.
+  for(let y=0;y<rows;y++) for(let x=0;x<cols;x++){
+    const cx=crop.x+(x+.5)*crop.w/cols, cy=crop.y+(y+.5)*crop.h/rows;
+    let red=0,white=0,center=0,edgeInk=0,edgeTotal=0;
+    for(let dy=-ry;dy<=ry;dy+=step) for(let dx=-rx;dx<=rx;dx+=step){
+      const nx=dx/rx,ny=dy/ry,d2=nx*nx+ny*ny;if(d2>1)continue;
+      const px=Math.round(cx+dx),py=Math.round(cy+dy);if(px<0||px>=W||py<0||py>=H)continue;
+      const i=(py*W+px)*4,a=pixels[i+3];if(a<40)continue;
+      const r=pixels[i],g=pixels[i+1],b=pixels[i+2];
+      if(d2<=.62){center++; if(isRedBead(r,g,b))red++; if(Math.min(r,g,b)>145&&Math.max(r,g,b)-Math.min(r,g,b)<62)white++;}
+      else {edgeTotal++; if(isRedBead(r,g,b)||Math.min(r,g,b)>145)edgeInk++;}
+    }
+    if(center<4)continue;
+    const rr=red/center,wr=white/center,roundness=edgeTotal?edgeInk/edgeTotal:0;
+    // O centro deve conter uma cor de conta; a faixa externa pode conter os
+    // pequenos vazios/cruzamentos que separam uma miçanga da outra.
+    if(rr>=.16){grid[y][x]='capture_red';confidence[y][x]=rr*(1.15-.25*roundness)}
+    else if(wr>=.30){grid[y][x]='capture_white';confidence[y][x]=wr*(1.15-.25*roundness)}
+  }
+
+  // Regularização geométrica: pontos isolados sem vizinhos no passo esperado
+  // são descartados; lacunas fortes entre vizinhos alinhados são recuperadas.
+  const out=grid.map(r=>r.slice());
+  for(let y=0;y<rows;y++) for(let x=0;x<cols;x++){
+    const n=[[y-1,x],[y+1,x],[y,x-1],[y,x+1]].filter(([a,b])=>a>=0&&a<rows&&b>=0&&b<cols).map(([a,b])=>grid[a][b]).filter(Boolean);
+    if(grid[y][x] && !n.length && confidence[y][x]<.42) out[y][x]=null;
+    if(!grid[y][x]){
+      const lr=x>0&&x<cols-1&&grid[y][x-1]&&grid[y][x+1];
+      const ud=y>0&&y<rows-1&&grid[y-1][x]&&grid[y+1][x];
+      if(lr||ud){
+        const ids=[lr&&grid[y][x-1],lr&&grid[y][x+1],ud&&grid[y-1][x],ud&&grid[y+1][x]].filter(Boolean);
+        if(ids.length>=2 && ids.every(v=>v===ids[0])) out[y][x]=ids[0];
+      }
+    }
+  }
+  return {grid:out,palette:[
+    {id:'capture_white',name:'Branco',code:'002',hex:'#ffffff'},
+    {id:'capture_red',name:'Vermelho',code:'003',hex:'#d8342a'}
+  ]};
 }
 
 function convertTwoColorBeads(ctx,crop,cols,rows){
@@ -1079,7 +1209,8 @@ async function generateProjectFromImage(){
 
   const canvas=$("imageProcessCanvas");
   const ctx=canvas.getContext("2d",{willReadFrequently:true});
-  const maxSide=1400;
+  // V5.30: preserva mais detalhe para reconhecer o formato arredondado e os cruzamentos entre contas.
+  const maxSide=patternMode==="beads"?2400:1800;
   const scale=Math.min(1,maxSide/Math.max(uploadedImage.naturalWidth,uploadedImage.naturalHeight));
   canvas.width=Math.max(1,Math.round(uploadedImage.naturalWidth*scale));
   canvas.height=Math.max(1,Math.round(uploadedImage.naturalHeight*scale));
@@ -1087,8 +1218,11 @@ async function generateProjectFromImage(){
   ctx.imageSmoothingQuality="high";
   ctx.drawImage(uploadedImage,0,0,canvas.width,canvas.height);
 
-  // V5.24: os dois modos recortam primeiro o objeto e preservam sua silhueta.
-  const objectCrop=(patternMode==="beads"&&redBeadBounds(ctx,canvas.width,canvas.height))||cropTransparentBounds(ctx,canvas.width,canvas.height,bgMode);
+  // V5.29: quando há recorte livre, tudo fora do polígono fica transparente.
+  // A caixa geométrica do próprio polígono passa a ser a referência primária.
+  const manualBounds=manualCropBounds(canvas.width,canvas.height);
+  if(manualBounds) applyManualCropMask(ctx,canvas.width,canvas.height);
+  const objectCrop=manualBounds || (patternMode==="beads"&&redBeadBounds(ctx,canvas.width,canvas.height)) || cropTransparentBounds(ctx,canvas.width,canvas.height,bgMode);
   const aspect=objectCrop.h/objectCrop.w;
   const rows=rowsChoice==="auto"
     ? Math.max(2,Math.min(100,Math.round(cols*aspect)))
@@ -1097,17 +1231,17 @@ async function generateProjectFromImage(){
   // que uma tabela larga ou alta deforme o objeto fotografado.
   const crop=fitCropToGrid(objectCrop,canvas.width,canvas.height,cols,rows);
   if(patternMode==="beads"){
-    const detected=convertTwoColorBeads(ctx,crop,cols,rows);
+    const detected=convertGeometricTwoColorBeads(ctx,crop,cols,rows);
     project={id:uid(),name,rows,cols,beadSize:3,technique:"Grade reta",
       palette:detected.palette,grid:detected.grid,
       createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),
-      source:"image",captureMode:"two-color-beads",detectedColorIds:detected.palette.map(c=>c.id),captureCrop:crop};
+      source:"image",captureMode:"geometric-beads-v530",detectedColorIds:detected.palette.map(c=>c.id),captureCrop:crop,manualCrop:manualBounds?imageCropPoints.map(p=>({...p})):null};
     selectedColor="capture_red";tool="paint";symmetry=false;undoStack=[];redoStack=[];
     selectedRows.clear();selectedCols.clear();areaSelection=null;updateRowSelectionBar();updateColSelectionBar();
     zoomLevel=1;setProjectLabel();renderPalette();$("editorPaletteBar")?.classList.remove("paletteCollapsed");
     $("paletteBtn")?.classList.add("activeTool");updateToolButtons();renderGrid();showView("editorView");
     setupZoomGestures();applyZoom(1);setLoomMode(false);
-    toast("Miçangas vermelhas e brancas detectadas; confira a borda da peça");
+    toast("Geometria das miçangas detectada — confira o diagrama");
     return;
   }
   const backgroundRgb=borderBackgroundColor(ctx,canvas.width,canvas.height);
@@ -1159,7 +1293,7 @@ async function generateProjectFromImage(){
     detectedColorIds:imgPalette.map(c=>c.id),
     sourceImage:$("imagePreview")?.src||null,
     captureCrop:crop,objectCrop,
-    captureTable:{rows,cols},patternMode,patternRows,patternAxis,useRealColors
+    captureTable:{rows,cols},patternMode,patternRows,patternAxis,useRealColors,manualCrop:manualBounds?imageCropPoints.map(p=>({...p})):null
   };
 
   selectedColor=project.palette[0].id;
@@ -1515,9 +1649,11 @@ function loadImageFromInput(input){
   const img=new Image();
   img.onload=()=>{
     uploadedImage=img;
+    resetFreeCrop();
     $("imagePreview").src=url;
     $("imagePreviewWrap").classList.remove("hidden");
-    toast("Imagem carregada");
+    requestAnimationFrame(()=>{syncCropCanvasSize();setupFreeCrop()});
+    toast("Imagem carregada — você pode fazer o recorte livre");
   };
   img.onerror=()=>{
     URL.revokeObjectURL(url);
@@ -1525,6 +1661,20 @@ function loadImageFromInput(input){
   };
   img.src=url;
 }
+
+$("freeCropBtn").onclick=()=>{
+  if(!uploadedImage){toast("Escolha uma imagem primeiro");return}
+  imageCropActive=!imageCropActive;syncCropCanvasSize();setupFreeCrop();
+  $("imageCropStage")?.classList.toggle("cropActive",imageCropActive);
+  $("freeCropBtn")?.classList.toggle("activeTool",imageCropActive);
+  toast(imageCropActive?"Recorte livre: contorne a peça com o dedo":"Recorte livre pausado");
+};
+$("undoCropBtn").onclick=()=>{
+  if(!imageCropHistory.length){imageCropPoints=[]}else imageCropPoints=imageCropHistory.pop();
+  drawFreeCrop();$("undoCropBtn").disabled=!imageCropHistory.length&&imageCropPoints.length===0;$("clearCropBtn").disabled=imageCropPoints.length===0;
+};
+$("clearCropBtn").onclick=()=>{imageCropHistory.push(imageCropPoints.slice());imageCropPoints=[];drawFreeCrop();$("clearCropBtn").disabled=true;const guide=$("cropGuideText");if(guide){guide.classList.remove("ready");guide.textContent="Contorne somente a peça com o dedo. O algoritmo usará esse contorno para definir a geometria do desenho."}};
+window.addEventListener("resize",()=>{if(uploadedImage)requestAnimationFrame(syncCropCanvasSize)});
 
 $("cameraImageBtn").onclick=()=>{
   const input=$("cameraImageInput");

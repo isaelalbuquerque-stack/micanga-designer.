@@ -212,7 +212,16 @@
           </div>
 
           <div id="imagePreviewWrap" class="imagePreviewWrap hidden">
-            <img id="imagePreview" alt="Prévia da imagem selecionada" />
+            <div id="imageCropStage" class="imageCropStage">
+              <img id="imagePreview" alt="Prévia da imagem selecionada" />
+              <canvas id="imageCropCanvas" aria-label="Recorte livre da peça"></canvas>
+            </div>
+            <div class="cropToolbar" aria-label="Ferramentas de recorte">
+              <button id="freeCropBtn" type="button" class="secondary">✂️ Recorte livre</button>
+              <button id="undoCropBtn" type="button" class="secondary" disabled>↶ Desfazer</button>
+              <button id="clearCropBtn" type="button" class="secondary" disabled>✕ Limpar</button>
+            </div>
+            <p id="cropGuideText" class="helperText cropGuideText">Contorne somente a peça com o dedo. O algoritmo usará esse contorno para definir a geometria do desenho.</p>
           </div>
 
           <div class="grid2">
