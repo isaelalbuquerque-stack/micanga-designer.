@@ -216,6 +216,11 @@
               <img id="imagePreview" alt="Prévia da imagem selecionada" />
               <canvas id="imageCropCanvas" aria-label="Recorte livre da peça"></canvas>
             </div>
+            <div id="imagePointMagnifier" class="imagePointMagnifier hidden" aria-hidden="true">
+              <strong>Ajuste fino</strong>
+              <canvas id="imagePointMagnifierCanvas" width="150" height="150"></canvas>
+              <small>A cruz mostra o ponto sob seu dedo.</small>
+            </div>
             <div class="cropToolbar" aria-label="Ferramentas de enquadramento">
               <button id="sixPointCropBtn" type="button" class="secondary">⬡ Ajustar 6 pontos</button>
               <button id="imagePanBtn" type="button" class="secondary">✋ Arrastar imagem</button>
@@ -379,8 +384,17 @@
           <div><strong>Prévia da geometria</strong><small id="geometryPreviewInfo">Confira a posição das miçangas antes de gerar.</small></div>
           <button id="closeGeometryPreviewBtn" type="button" class="secondary">✕</button>
         </div>
+        <div class="geometryPreviewEditBar">
+          <div>
+            <strong>Corrigir prévia</strong>
+            <small>Escolha uma cor e toque nas miçangas faltantes ou incorretas.</small>
+          </div>
+          <button id="geometryPreviewAddColorBtn" type="button" class="secondary">＋ Cor</button>
+          <input id="geometryPreviewColorInput" type="color" value="#d8342a" class="hidden" />
+        </div>
+        <div id="geometryPreviewPalette" class="geometryPreviewPalette" aria-label="Cores para corrigir a prévia"></div>
         <div class="geometryPreviewViewport"><canvas id="geometryPreviewCanvas"></canvas></div>
-        <p class="helperText">As linhas lilás mostram a grade calculada. Os círculos mostram as miçangas reconhecidas pelo algoritmo.</p>
+        <p class="helperText">Toque numa célula para completar uma miçanga, trocar a cor ou apagar um ponto detectado incorretamente.</p>
         <div class="rowBtns">
           <button id="backGeometryPreviewBtn" type="button" class="secondary">← Voltar e corrigir</button>
           <button id="confirmGeometryBtn" type="button" class="primary">✓ Gerar diagrama</button>

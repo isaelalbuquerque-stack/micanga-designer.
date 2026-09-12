@@ -90,6 +90,10 @@ let imageSixPoints = null;
 let imagePointDrag = -1;
 let imagePreviewZoom = 1;
 let imagePanMode = false;
+let geometryPreviewState = null;
+let geometryPreviewTool = "paint";
+let geometryPreviewColorId = "capture_red";
+let imageMagnifierVisible = false;
 const IMAGE_PREVIEW_ZOOM_MIN = 1;
 const IMAGE_PREVIEW_ZOOM_MAX = 6;
 
@@ -936,7 +940,7 @@ function setCropFromSixPoints(){
 }
 function resetFreeCrop(){
   imageCropPoints=[]; imageCropHistory=[]; imageCropDrawing=false; imageCropActive=false;
-  imageCropMode="free"; imageSixPoints=defaultImageSixPoints(); imageQuad=sixPointsToQuad(); imageQuadAdjusted=false; imagePointDrag=-1; imagePreviewZoom=1;
+  imageCropMode="free"; imageSixPoints=defaultImageSixPoints(); imageQuad=sixPointsToQuad(); imageQuadAdjusted=false; imagePointDrag=-1; imagePreviewZoom=1; geometryPreviewState=null; hideImagePointMagnifier();
   const stage=$("imageCropStage"),canvas=$("imageCropCanvas"),btn=$("freeCropBtn"),guide=$("cropGuideText");
   stage?.classList.remove("cropActive","sixPointActive"); btn?.classList.remove("activeTool"); $("sixPointCropBtn")?.classList.remove("activeTool");
   if(stage){stage.style.width="100%";stage.style.minWidth="100%"}
@@ -1076,20 +1080,42 @@ function finishFreeCrop(){
   toast("Recorte livre definido");
 }
 
+
+function showImagePointMagnifier(point){
+  const box=$("imagePointMagnifier"),canvas=$("imagePointMagnifierCanvas"),img=$("imagePreview");
+  if(!box||!canvas||!img||!point)return;
+  const size=150;canvas.width=size;canvas.height=size;
+  const ctx=canvas.getContext("2d");ctx.clearRect(0,0,size,size);
+  const sw=Math.max(24,img.naturalWidth*.12/imagePreviewZoom),sh=Math.max(24,img.naturalHeight*.12/imagePreviewZoom);
+  const sx=Math.max(0,Math.min(img.naturalWidth-sw,point.x*img.naturalWidth-sw/2));
+  const sy=Math.max(0,Math.min(img.naturalHeight-sh,point.y*img.naturalHeight-sh/2));
+  ctx.imageSmoothingEnabled=true;ctx.drawImage(img,sx,sy,sw,sh,0,0,size,size);
+  ctx.save();
+  ctx.strokeStyle="#f59e0b";ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(size/2,8);ctx.lineTo(size/2,size-8);ctx.moveTo(8,size/2);ctx.lineTo(size-8,size/2);ctx.stroke();
+  ctx.strokeStyle="rgba(139,92,246,.95)";ctx.setLineDash([5,4]);ctx.lineWidth=2;
+  ctx.beginPath();ctx.arc(size/2,size/2,34,0,Math.PI*2);ctx.stroke();
+  ctx.restore();
+  box.classList.remove("hidden");imageMagnifierVisible=true;
+}
+function hideImagePointMagnifier(){
+  $("imagePointMagnifier")?.classList.add("hidden");imageMagnifierVisible=false;
+}
+
 function setupFreeCrop(){
   const canvas=$("imageCropCanvas"); if(!canvas||canvas.dataset.ready)return; canvas.dataset.ready="1";
   const begin=e=>{
     const p=cropPointFromEvent(e);
-    if(imageCropMode==="six"){const i=nearestSixPoint(p);if(i<0)return;e.preventDefault();imagePointDrag=i;try{canvas.setPointerCapture(e.pointerId)}catch(_){};return}
+    if(imageCropMode==="six"){const i=nearestSixPoint(p);if(i<0)return;e.preventDefault();imagePointDrag=i;showImagePointMagnifier(p);try{canvas.setPointerCapture(e.pointerId)}catch(_){};return}
     if(!imageCropActive)return;e.preventDefault();syncCropCanvasSize();imageCropHistory.push(imageCropPoints.slice());imageCropPoints=[p];imageCropDrawing=true;try{canvas.setPointerCapture(e.pointerId)}catch(_){}
   };
   const move=e=>{
     const p=cropPointFromEvent(e);
-    if(imageCropMode==="six"&&imagePointDrag>=0){e.preventDefault();imageSixPoints[imagePointDrag]=p;setCropFromSixPoints();drawFreeCrop();return}
+    if(imageCropMode==="six"&&imagePointDrag>=0){e.preventDefault();imageSixPoints[imagePointDrag]=p;setCropFromSixPoints();drawFreeCrop();showImagePointMagnifier(p);return}
     if(!imageCropActive||!imageCropDrawing)return;e.preventDefault();imageCropPoints.push(p);drawFreeCrop()
   };
   const end=e=>{
-    if(imageCropMode==="six"&&imagePointDrag>=0){imagePointDrag=-1;try{canvas.releasePointerCapture(e.pointerId)}catch(_){};drawFreeCrop();return}
+    if(imageCropMode==="six"&&imagePointDrag>=0){imagePointDrag=-1;hideImagePointMagnifier();try{canvas.releasePointerCapture(e.pointerId)}catch(_){};drawFreeCrop();return}
     if(!imageCropDrawing)return;e.preventDefault();try{canvas.releasePointerCapture(e.pointerId)}catch(_){}finishFreeCrop()
   };
   canvas.addEventListener("pointerdown",begin);canvas.addEventListener("pointermove",move);canvas.addEventListener("pointerup",end);canvas.addEventListener("pointercancel",end);
@@ -1361,18 +1387,73 @@ function captureSetupForPreview(){
   const crop=fitCropToGrid(objectCrop,work.width,work.height,cols,rows);
   return {work,ctx,crop,cols,rows};
 }
+
+function geometryPaletteById(id){
+  return geometryPreviewState?.palette?.find(c=>c.id===id)||null;
+}
+function renderGeometryPreview(){
+  const s=geometryPreviewState;if(!s)return;
+  const {work,crop,cols,rows,grid,palette,scale}=s;
+  const canvas=$("geometryPreviewCanvas"),out=canvas.getContext("2d");
+  canvas.width=Math.max(1,Math.round(work.width*scale));canvas.height=Math.max(1,Math.round(work.height*scale));
+  out.clearRect(0,0,canvas.width,canvas.height);out.drawImage(work,0,0,canvas.width,canvas.height);
+  out.save();out.scale(scale,scale);
+  out.lineWidth=Math.max(1,2/scale);out.strokeStyle="rgba(139,92,246,.58)";
+  for(let x=0;x<=cols;x++){const px=crop.x+x*crop.w/cols;out.beginPath();out.moveTo(px,crop.y);out.lineTo(px,crop.y+crop.h);out.stroke()}
+  for(let y=0;y<=rows;y++){const py=crop.y+y*crop.h/rows;out.beginPath();out.moveTo(crop.x,py);out.lineTo(crop.x+crop.w,py);out.stroke()}
+  for(let y=0;y<rows;y++)for(let x=0;x<cols;x++){
+    const id=grid[y][x];if(!id)continue;const col=palette.find(c=>c.id===id);if(!col)continue;
+    const cx=crop.x+(x+.5)*crop.w/cols,cy=crop.y+(y+.5)*crop.h/rows,r=Math.max(2,Math.min(crop.w/cols,crop.h/rows)*.34);
+    out.beginPath();out.arc(cx,cy,r,0,Math.PI*2);out.fillStyle=col.hex;out.fill();
+    out.strokeStyle="rgba(30,20,40,.45)";out.lineWidth=Math.max(1,1.4/scale);out.stroke();
+  }
+  out.restore();
+  $("geometryPreviewInfo").textContent=`Prévia ${cols} × ${rows}: toque nas células para corrigir falhas antes de gerar.`;
+  renderGeometryPreviewPalette();
+}
+function renderGeometryPreviewPalette(){
+  const holder=$("geometryPreviewPalette");if(!holder||!geometryPreviewState)return;holder.innerHTML="";
+  for(const c of geometryPreviewState.palette){
+    const b=document.createElement("button");b.type="button";b.className="geometryColorBtn"+(geometryPreviewTool==="paint"&&geometryPreviewColorId===c.id?" activeTool":"");
+    b.title=c.name;b.innerHTML=`<span style="background:${c.hex}"></span><small>${c.name}</small>`;
+    b.onclick=()=>{geometryPreviewTool="paint";geometryPreviewColorId=c.id;renderGeometryPreviewPalette()};
+    holder.appendChild(b);
+  }
+  const erase=document.createElement("button");erase.type="button";erase.className="geometryColorBtn"+(geometryPreviewTool==="erase"?" activeTool":"");
+  erase.innerHTML="<span class='eraseDot'>×</span><small>Apagar</small>";erase.onclick=()=>{geometryPreviewTool="erase";renderGeometryPreviewPalette()};holder.appendChild(erase);
+}
+function geometryCellFromEvent(e){
+  const s=geometryPreviewState,canvas=$("geometryPreviewCanvas");if(!s||!canvas)return null;
+  const rect=canvas.getBoundingClientRect();
+  const px=(e.clientX-rect.left)*(canvas.width/rect.width)/s.scale;
+  const py=(e.clientY-rect.top)*(canvas.height/rect.height)/s.scale;
+  const x=Math.floor((px-s.crop.x)/s.crop.w*s.cols),y=Math.floor((py-s.crop.y)/s.crop.h*s.rows);
+  if(x<0||x>=s.cols||y<0||y>=s.rows)return null;return{x,y};
+}
+function paintGeometryPreviewCell(e){
+  const cell=geometryCellFromEvent(e);if(!cell||!geometryPreviewState)return;
+  geometryPreviewState.grid[cell.y][cell.x]=geometryPreviewTool==="erase"?null:geometryPreviewColorId;
+  renderGeometryPreview();
+}
+function addGeometryPreviewColor(hex){
+  if(!geometryPreviewState)return;
+  const exists=geometryPreviewState.palette.find(c=>c.hex.toLowerCase()===hex.toLowerCase());
+  if(exists){geometryPreviewColorId=exists.id;geometryPreviewTool="paint";renderGeometryPreviewPalette();return}
+  const id="capture_custom_"+Date.now().toString(36);
+  geometryPreviewState.palette.push({id,name:"Cor manual",code:"M",hex});
+  geometryPreviewColorId=id;geometryPreviewTool="paint";renderGeometryPreview();
+}
 function showGeometryPreview(){
   if(!uploadedImage){toast("Escolha uma imagem primeiro");return}
   const setup=captureSetupForPreview();if(!setup)return;
   const {work,ctx,crop,cols,rows}=setup;const detected=convertGeometricTwoColorBeads(ctx,crop,cols,rows);
-  const canvas=$("geometryPreviewCanvas"),max=1100,scale=Math.min(1,max/Math.max(work.width,work.height));canvas.width=Math.max(1,Math.round(work.width*scale));canvas.height=Math.max(1,Math.round(work.height*scale));const out=canvas.getContext("2d");out.drawImage(work,0,0,canvas.width,canvas.height);
-  out.save();out.scale(scale,scale);out.lineWidth=Math.max(1,2/scale);out.strokeStyle="rgba(139,92,246,.55)";
-  for(let x=0;x<=cols;x++){const px=crop.x+x*crop.w/cols;out.beginPath();out.moveTo(px,crop.y);out.lineTo(px,crop.y+crop.h);out.stroke()}
-  for(let y=0;y<=rows;y++){const py=crop.y+y*crop.h/rows;out.beginPath();out.moveTo(crop.x,py);out.lineTo(crop.x+crop.w,py);out.stroke()}
-  if(detected){for(let y=0;y<rows;y++)for(let x=0;x<cols;x++){const id=detected.grid[y][x];if(!id)continue;const cx=crop.x+(x+.5)*crop.w/cols,cy=crop.y+(y+.5)*crop.h/rows,r=Math.max(2,Math.min(crop.w/cols,crop.h/rows)*.30);out.beginPath();out.arc(cx,cy,r,0,Math.PI*2);out.strokeStyle=id==="capture_red"?"rgba(220,38,38,.95)":"rgba(255,255,255,.95)";out.lineWidth=Math.max(2,3/scale);out.stroke()}}
-  out.restore();$("geometryPreviewInfo").textContent=`Prévia ${cols} × ${rows}: linhas lilás = grade; círculos = miçangas reconhecidas.`;$("geometryPreviewModal").classList.remove("hidden");
+  const max=1100,scale=Math.min(1,max/Math.max(work.width,work.height));
+  geometryPreviewState={work,crop,cols,rows,scale,grid:detected.grid.map(r=>r.slice()),palette:detected.palette.map(c=>({...c}))};
+  geometryPreviewTool="paint";geometryPreviewColorId=detected.palette.find(c=>c.id==="capture_red")?.id||detected.palette[0]?.id;
+  renderGeometryPreview();$("geometryPreviewModal").classList.remove("hidden");
 }
 function closeGeometryPreview(){$("geometryPreviewModal")?.classList.add("hidden")}
+
 
 async function generateProjectFromImage(){
   if(!uploadedImage){
@@ -1410,7 +1491,10 @@ async function generateProjectFromImage(){
   // que uma tabela larga ou alta deforme o objeto fotografado.
   const crop=fitCropToGrid(objectCrop,canvas.width,canvas.height,cols,rows);
   {
-    const detected=convertGeometricTwoColorBeads(ctx,crop,cols,rows);
+    const previewOk=geometryPreviewState && geometryPreviewState.cols===cols && geometryPreviewState.rows===rows;
+    const detected=previewOk
+      ? {palette:geometryPreviewState.palette.map(c=>({...c})),grid:geometryPreviewState.grid.map(r=>r.slice())}
+      : convertGeometricTwoColorBeads(ctx,crop,cols,rows);
     project={id:uid(),name,rows,cols,beadSize:3,technique:"Grade reta",
       palette:detected.palette,grid:detected.grid,
       createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),
@@ -1421,6 +1505,7 @@ async function generateProjectFromImage(){
     $("paletteBtn")?.classList.add("activeTool");updateToolButtons();renderGrid();showView("editorView");
     setupZoomGestures();applyZoom(1);setLoomMode(false);
     toast("Área selecionada convertida — confira o diagrama");
+    geometryPreviewState=null;
     return;
   }
   const backgroundRgb=borderBackgroundColor(ctx,canvas.width,canvas.height);
@@ -1855,6 +1940,9 @@ $("previewGeometryBtn").onclick=showGeometryPreview;
 $("closeGeometryPreviewBtn").onclick=closeGeometryPreview;
 $("backGeometryPreviewBtn").onclick=closeGeometryPreview;
 $("confirmGeometryBtn").onclick=()=>{closeGeometryPreview();generateProjectFromImage()};
+$("geometryPreviewCanvas")?.addEventListener("pointerdown",e=>{e.preventDefault();paintGeometryPreviewCell(e)});
+$("geometryPreviewAddColorBtn")?.addEventListener("click",()=>$("geometryPreviewColorInput")?.click());
+$("geometryPreviewColorInput")?.addEventListener("input",e=>addGeometryPreviewColor(e.target.value));
 $("undoCropBtn").onclick=()=>{
   if(!imageCropHistory.length){imageCropPoints=[]}else imageCropPoints=imageCropHistory.pop();
   drawFreeCrop();$("undoCropBtn").disabled=!imageCropHistory.length&&imageCropPoints.length===0;$("clearCropBtn").disabled=imageCropPoints.length===0;

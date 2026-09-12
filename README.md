@@ -1,3 +1,12 @@
+# JPmiçangas Designer V5.35
+
+- Prévia da geometria agora é **editável** antes de gerar o diagrama.
+- Permite completar miçangas faltantes, trocar cor e apagar detecções incorretas.
+- Botão **＋ Cor** adiciona uma cor manual à prévia.
+- Ajuste dos 6 pontos ganhou **lupa flutuante**, deixando a borda visível mesmo com o dedo sobre o ponto.
+- Mantido o modo **✋ Arrastar imagem** nos eixos horizontal e vertical.
+- Mantidos zoom por botões/pinça e barras de rolagem ampliadas.
+
 # JPmiçangas Designer V5.34
 
 - Adicionado botão **✋ Arrastar imagem** na tela Imagem → Diagrama.
