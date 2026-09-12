@@ -83,6 +83,13 @@ let imageCropPoints = [];
 let imageCropHistory = [];
 let imageCropDrawing = false;
 let imageCropActive = false;
+let imageCropMode = "free";
+let imageQuad = null;
+let imageQuadAdjusted = false;
+let imageCornerDrag = -1;
+let imagePreviewZoom = 1;
+const IMAGE_PREVIEW_ZOOM_MIN = 1;
+const IMAGE_PREVIEW_ZOOM_MAX = 4;
 
 
 const READY_TEMPLATES = [
@@ -906,60 +913,107 @@ function lockDetectedColorsToRealPalette(imagePalette){
 
 
 // =========================================================
-// V5.30 — recorte livre + leitura geométrica das miçangas
+// V5.31 — recorte, cantos/perspectiva, zoom e prévia geométrica
 // =========================================================
+function defaultImageQuad(){
+  return [{x:.03,y:.03},{x:.97,y:.03},{x:.97,y:.97},{x:.03,y:.97}];
+}
 function resetFreeCrop(){
   imageCropPoints=[]; imageCropHistory=[]; imageCropDrawing=false; imageCropActive=false;
+  imageCropMode="free"; imageQuad=defaultImageQuad(); imageQuadAdjusted=false; imageCornerDrag=-1; imagePreviewZoom=1;
   const stage=$("imageCropStage"),canvas=$("imageCropCanvas"),btn=$("freeCropBtn"),guide=$("cropGuideText");
-  stage?.classList.remove("cropActive"); btn?.classList.remove("activeTool");
+  stage?.classList.remove("cropActive","cornerActive"); btn?.classList.remove("activeTool"); $("cornerCropBtn")?.classList.remove("activeTool");
+  if(stage) stage.style.width="100%";
   if(canvas){const ctx=canvas.getContext("2d");ctx.clearRect(0,0,canvas.width,canvas.height)}
   if($("undoCropBtn")) $("undoCropBtn").disabled=true;
   if($("clearCropBtn")) $("clearCropBtn").disabled=true;
-  if(guide){guide.classList.remove("ready");guide.textContent="Contorne somente a peça com o dedo. O algoritmo usará esse contorno para definir a geometria do desenho."}
+  updateImageZoomLabel();
+  if(guide){guide.classList.remove("ready");guide.textContent="Ajuste os cantos ou contorne somente a peça. Depois confira a Prévia da geometria."}
+}
+
+function setCropMode(mode){
+  imageCropMode=mode;
+  imageCropActive=mode==="free";
+  const stage=$("imageCropStage");
+  stage?.classList.toggle("cropActive",mode==="free");
+  stage?.classList.toggle("cornerActive",mode==="corners");
+  $("freeCropBtn")?.classList.toggle("activeTool",mode==="free");
+  $("cornerCropBtn")?.classList.toggle("activeTool",mode==="corners");
+  drawFreeCrop();
+}
+
+function updateImageZoomLabel(){if($("imageZoomLabel")) $("imageZoomLabel").textContent=Math.round(imagePreviewZoom*100)+"%"}
+function applyImagePreviewZoom(next){
+  imagePreviewZoom=Math.max(IMAGE_PREVIEW_ZOOM_MIN,Math.min(IMAGE_PREVIEW_ZOOM_MAX,next));
+  const stage=$("imageCropStage");if(stage)stage.style.width=(imagePreviewZoom*100)+"%";
+  updateImageZoomLabel();requestAnimationFrame(syncCropCanvasSize);
 }
 
 function syncCropCanvasSize(){
   const img=$("imagePreview"),canvas=$("imageCropCanvas"); if(!img||!canvas)return;
   const rect=img.getBoundingClientRect();
   const w=Math.max(1,Math.round(rect.width)),h=Math.max(1,Math.round(rect.height));
-  if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;drawFreeCrop()}
+  if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h}
+  drawFreeCrop();
+}
+
+function drawQuadHandles(ctx,canvas){
+  const q=imageQuad||defaultImageQuad();
+  ctx.save();ctx.lineWidth=2.5;ctx.strokeStyle="#f59e0b";ctx.fillStyle="rgba(245,158,11,.12)";
+  ctx.beginPath();ctx.moveTo(q[0].x*canvas.width,q[0].y*canvas.height);for(let i=1;i<4;i++)ctx.lineTo(q[i].x*canvas.width,q[i].y*canvas.height);ctx.closePath();ctx.fill();ctx.stroke();
+  q.forEach((p,i)=>{ctx.beginPath();ctx.arc(p.x*canvas.width,p.y*canvas.height,10,0,Math.PI*2);ctx.fillStyle="#fff";ctx.fill();ctx.lineWidth=4;ctx.strokeStyle="#f59e0b";ctx.stroke();ctx.fillStyle="#6b3b00";ctx.font="bold 11px sans-serif";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(String(i+1),p.x*canvas.width,p.y*canvas.height)});
+  ctx.restore();
 }
 
 function drawFreeCrop(){
   const canvas=$("imageCropCanvas"); if(!canvas)return; const ctx=canvas.getContext("2d");
   ctx.clearRect(0,0,canvas.width,canvas.height);
-  if(imageCropPoints.length<2)return;
-  ctx.save();
-  ctx.lineWidth=3;ctx.lineJoin="round";ctx.lineCap="round";ctx.strokeStyle="#8b5cf6";ctx.fillStyle="rgba(139,92,246,.16)";
-  ctx.beginPath();ctx.moveTo(imageCropPoints[0].x*canvas.width,imageCropPoints[0].y*canvas.height);
-  imageCropPoints.slice(1).forEach(p=>ctx.lineTo(p.x*canvas.width,p.y*canvas.height));
-  if(!imageCropDrawing&&imageCropPoints.length>2){ctx.closePath();ctx.fill()}
-  ctx.stroke();ctx.restore();
+  if(imageCropPoints.length>=2){
+    ctx.save();ctx.lineWidth=3;ctx.lineJoin="round";ctx.lineCap="round";ctx.strokeStyle="#8b5cf6";ctx.fillStyle="rgba(139,92,246,.16)";
+    ctx.beginPath();ctx.moveTo(imageCropPoints[0].x*canvas.width,imageCropPoints[0].y*canvas.height);
+    imageCropPoints.slice(1).forEach(p=>ctx.lineTo(p.x*canvas.width,p.y*canvas.height));
+    if(!imageCropDrawing&&imageCropPoints.length>2){ctx.closePath();ctx.fill()}ctx.stroke();ctx.restore();
+  }
+  if(imageCropMode==="corners"||imageQuadAdjusted)drawQuadHandles(ctx,canvas);
 }
 
 function cropPointFromEvent(e){
   const canvas=$("imageCropCanvas"),rect=canvas.getBoundingClientRect();
   return {x:Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width)),y:Math.max(0,Math.min(1,(e.clientY-rect.top)/rect.height))};
 }
+function nearestQuadCorner(p){
+  const q=imageQuad||defaultImageQuad();let best=-1,d=.08;
+  q.forEach((c,i)=>{const n=Math.hypot(c.x-p.x,c.y-p.y);if(n<d){d=n;best=i}});return best;
+}
+function rotateQuad(degrees){
+  if(!imageQuad)imageQuad=defaultImageQuad();const a=degrees*Math.PI/180;
+  const cx=imageQuad.reduce((n,p)=>n+p.x,0)/4,cy=imageQuad.reduce((n,p)=>n+p.y,0)/4;
+  imageQuad=imageQuad.map(p=>{const x=p.x-cx,y=p.y-cy;return{x:Math.max(0,Math.min(1,cx+x*Math.cos(a)-y*Math.sin(a))),y:Math.max(0,Math.min(1,cy+x*Math.sin(a)+y*Math.cos(a)))}});
+  imageQuadAdjusted=true;drawFreeCrop();
+}
+function autoStraightenQuad(){
+  if(!imageQuad)imageQuad=defaultImageQuad();
+  const top=Math.atan2(imageQuad[1].y-imageQuad[0].y,imageQuad[1].x-imageQuad[0].x)*180/Math.PI;
+  rotateQuad(-top);toast("Inclinação superior corrigida");
+}
 
 function finishFreeCrop(){
   imageCropDrawing=false;
   if(imageCropPoints.length<3){imageCropPoints=[];drawFreeCrop();return}
-  // reduz pontos quase coincidentes para deixar o polígono mais estável
   const reduced=[imageCropPoints[0]];
   for(const p of imageCropPoints.slice(1)){const q=reduced.at(-1);if(Math.hypot(p.x-q.x,p.y-q.y)>.006)reduced.push(p)}
   imageCropPoints=reduced;drawFreeCrop();
   if($("undoCropBtn")) $("undoCropBtn").disabled=false;
   if($("clearCropBtn")) $("clearCropBtn").disabled=false;
-  const guide=$("cropGuideText");if(guide){guide.classList.add("ready");guide.textContent="Recorte definido. O algoritmo analisará somente esta área e calculará a geometria da peça."}
+  const guide=$("cropGuideText");if(guide){guide.classList.add("ready");guide.textContent="Recorte definido. Agora use os cantos/perspectiva e confira a Prévia da geometria."}
   toast("Recorte livre definido");
 }
 
 function setupFreeCrop(){
   const canvas=$("imageCropCanvas"); if(!canvas||canvas.dataset.ready)return; canvas.dataset.ready="1";
-  const begin=e=>{if(!imageCropActive)return;e.preventDefault();syncCropCanvasSize();imageCropHistory.push(imageCropPoints.slice());imageCropPoints=[cropPointFromEvent(e)];imageCropDrawing=true;try{canvas.setPointerCapture(e.pointerId)}catch(_){}};
-  const move=e=>{if(!imageCropActive||!imageCropDrawing)return;e.preventDefault();imageCropPoints.push(cropPointFromEvent(e));drawFreeCrop()};
-  const end=e=>{if(!imageCropDrawing)return;e.preventDefault();try{canvas.releasePointerCapture(e.pointerId)}catch(_){}finishFreeCrop()};
+  const begin=e=>{const p=cropPointFromEvent(e);if(imageCropMode==="corners"){const i=nearestQuadCorner(p);if(i<0)return;e.preventDefault();imageCornerDrag=i;try{canvas.setPointerCapture(e.pointerId)}catch(_){};return}if(!imageCropActive)return;e.preventDefault();syncCropCanvasSize();imageCropHistory.push(imageCropPoints.slice());imageCropPoints=[p];imageCropDrawing=true;try{canvas.setPointerCapture(e.pointerId)}catch(_){}};
+  const move=e=>{const p=cropPointFromEvent(e);if(imageCropMode==="corners"&&imageCornerDrag>=0){e.preventDefault();imageQuad[imageCornerDrag]=p;imageQuadAdjusted=true;drawFreeCrop();return}if(!imageCropActive||!imageCropDrawing)return;e.preventDefault();imageCropPoints.push(p);drawFreeCrop()};
+  const end=e=>{if(imageCropMode==="corners"&&imageCornerDrag>=0){imageCornerDrag=-1;try{canvas.releasePointerCapture(e.pointerId)}catch(_){};drawFreeCrop();return}if(!imageCropDrawing)return;e.preventDefault();try{canvas.releasePointerCapture(e.pointerId)}catch(_){}finishFreeCrop()};
   canvas.addEventListener("pointerdown",begin);canvas.addEventListener("pointermove",move);canvas.addEventListener("pointerup",end);canvas.addEventListener("pointercancel",end);
 }
 
@@ -973,9 +1027,37 @@ function manualCropBounds(canvasW,canvasH){
 
 function applyManualCropMask(ctx,w,h){
   if(imageCropPoints.length<3)return false;
-  ctx.save();ctx.globalCompositeOperation="destination-in";ctx.beginPath();
-  ctx.moveTo(imageCropPoints[0].x*w,imageCropPoints[0].y*h);
-  imageCropPoints.slice(1).forEach(p=>ctx.lineTo(p.x*w,p.y*h));ctx.closePath();ctx.fillStyle="#000";ctx.fill();ctx.restore();return true;
+  ctx.save();ctx.globalCompositeOperation="destination-in";ctx.beginPath();ctx.moveTo(imageCropPoints[0].x*w,imageCropPoints[0].y*h);imageCropPoints.slice(1).forEach(p=>ctx.lineTo(p.x*w,p.y*h));ctx.closePath();ctx.fillStyle="#000";ctx.fill();ctx.restore();return true;
+}
+
+function alphaBounds(ctx,w,h){
+  const d=ctx.getImageData(0,0,w,h).data;let minX=w,minY=h,maxX=-1,maxY=-1;
+  for(let y=0;y<h;y+=2)for(let x=0;x<w;x+=2){if(d[(y*w+x)*4+3]>30){if(x<minX)minX=x;if(x>maxX)maxX=x;if(y<minY)minY=y;if(y>maxY)maxY=y}}
+  return maxX<0?null:{x:minX,y:minY,w:Math.max(1,maxX-minX+1),h:Math.max(1,maxY-minY+1)};
+}
+
+function affineFromTriangles(s0,s1,s2,d0,d1,d2){
+  const den=s0.x*(s1.y-s2.y)+s1.x*(s2.y-s0.y)+s2.x*(s0.y-s1.y);if(Math.abs(den)<1e-6)return null;
+  const solve=(v0,v1,v2)=>({
+    a:(v0*(s1.y-s2.y)+v1*(s2.y-s0.y)+v2*(s0.y-s1.y))/den,
+    b:(v0*(s2.x-s1.x)+v1*(s0.x-s2.x)+v2*(s1.x-s0.x))/den,
+    c:(v0*(s1.x*s2.y-s2.x*s1.y)+v1*(s2.x*s0.y-s0.x*s2.y)+v2*(s0.x*s1.y-s1.x*s0.y))/den
+  });
+  const X=solve(d0.x,d1.x,d2.x),Y=solve(d0.y,d1.y,d2.y);return {a:X.a,b:Y.a,c:X.b,d:Y.b,e:X.c,f:Y.c};
+}
+function drawWarpTriangle(ctx,img,s,d){
+  const m=affineFromTriangles(s[0],s[1],s[2],d[0],d[1],d[2]);if(!m)return;
+  ctx.save();ctx.beginPath();ctx.moveTo(d[0].x,d[0].y);ctx.lineTo(d[1].x,d[1].y);ctx.lineTo(d[2].x,d[2].y);ctx.closePath();ctx.clip();ctx.setTransform(m.a,m.b,m.c,m.d,m.e,m.f);ctx.drawImage(img,0,0);ctx.restore();
+}
+function renderAdjustedImageToCanvas(canvas,maxSide=2400){
+  const srcScale=Math.min(1,maxSide/Math.max(uploadedImage.naturalWidth,uploadedImage.naturalHeight));
+  const sw=Math.max(1,Math.round(uploadedImage.naturalWidth*srcScale)),sh=Math.max(1,Math.round(uploadedImage.naturalHeight*srcScale));
+  const src=document.createElement("canvas");src.width=sw;src.height=sh;const sx=src.getContext("2d",{willReadFrequently:true});sx.imageSmoothingEnabled=true;sx.imageSmoothingQuality="high";sx.drawImage(uploadedImage,0,0,sw,sh);applyManualCropMask(sx,sw,sh);
+  const q=(imageQuad||defaultImageQuad()).map(p=>({x:p.x*sw,y:p.y*sh}));
+  const top=Math.hypot(q[1].x-q[0].x,q[1].y-q[0].y),bottom=Math.hypot(q[2].x-q[3].x,q[2].y-q[3].y),left=Math.hypot(q[3].x-q[0].x,q[3].y-q[0].y),right=Math.hypot(q[2].x-q[1].x,q[2].y-q[1].y);
+  let dw=Math.max(64,Math.round((top+bottom)/2)),dh=Math.max(64,Math.round((left+right)/2));const outScale=Math.min(1,maxSide/Math.max(dw,dh));dw=Math.max(1,Math.round(dw*outScale));dh=Math.max(1,Math.round(dh*outScale));
+  canvas.width=dw;canvas.height=dh;const ctx=canvas.getContext("2d",{willReadFrequently:true});ctx.clearRect(0,0,dw,dh);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
+  const d=[{x:0,y:0},{x:dw,y:0},{x:dw,y:dh},{x:0,y:dh}];drawWarpTriangle(ctx,src,[q[0],q[1],q[2]],[d[0],d[1],d[2]]);drawWarpTriangle(ctx,src,[q[0],q[2],q[3]],[d[0],d[2],d[3]]);return ctx;
 }
 
 function cropTransparentBounds(ctx,w,h,bgMode){
@@ -1022,8 +1104,7 @@ function redBeadBounds(ctx,w,h){
   const data=ctx.getImageData(0,0,w,h).data;
   const rowCounts=new Uint32Array(h),colCounts=new Uint32Array(w);
   for(let y=0;y<h;y+=2)for(let x=0;x<w;x+=2){
-    const i=(y*w+x)*4;
-    if(isRedBead(data[i],data[i+1],data[i+2])){rowCounts[y]++;colCounts[x]++}
+    const i=(y*w+x)*4;if(data[i+3]>30&&isRedBead(data[i],data[i+1],data[i+2])){rowCounts[y]++;colCounts[x]++}
   }
   const rowMin=Math.max(2,Math.floor(w*.006)),colMin=Math.max(2,Math.floor(h*.006));
   let top=rowCounts.findIndex(n=>n>=rowMin),bottom=-1,left=colCounts.findIndex(n=>n>=colMin),right=-1;
@@ -1031,8 +1112,7 @@ function redBeadBounds(ctx,w,h){
   for(let x=w-1;x>=0;x--)if(colCounts[x]>=colMin){right=x;break}
   if(top<0||left<0||bottom<=top||right<=left)return null;
   const padX=Math.round((right-left)*.07),padY=Math.round((bottom-top)*.035);
-  left=Math.max(0,left-padX);right=Math.min(w-1,right+padX);
-  top=Math.max(0,top-padY);bottom=Math.min(h-1,bottom+padY);
+  left=Math.max(0,left-padX);right=Math.min(w-1,right+padX);top=Math.max(0,top-padY);bottom=Math.min(h-1,bottom+padY);
   return {x:left,y:top,w:right-left+1,h:bottom-top+1};
 }
 
@@ -1188,6 +1268,27 @@ function rebuildRepeatingPattern(grid,palette,period,axis="both"){
   return rebuilt;
 }
 
+function captureSetupForPreview(){
+  const cols=Math.max(2,Math.min(100,Number($("imageColsInput").value)||20));
+  const rowsChoice=$("imageRowsInput")?.value||"auto";const patternMode=$("imagePatternModeInput")?.value||"photo";const bgMode=$("backgroundModeInput").value;
+  const work=document.createElement("canvas");const ctx=renderAdjustedImageToCanvas(work,1600);
+  const masked=imageCropPoints.length>=3?alphaBounds(ctx,work.width,work.height):null;
+  const objectCrop=masked || (patternMode==="beads"&&redBeadBounds(ctx,work.width,work.height)) || cropTransparentBounds(ctx,work.width,work.height,bgMode);
+  const aspect=objectCrop.h/objectCrop.w;const rows=rowsChoice==="auto"?Math.max(2,Math.min(100,Math.round(cols*aspect))):Math.max(2,Math.min(100,Number(rowsChoice)||Math.round(cols*aspect)));
+  const crop=fitCropToGrid(objectCrop,work.width,work.height,cols,rows);return {work,ctx,crop,cols,rows,patternMode};
+}
+function showGeometryPreview(){
+  if(!uploadedImage){toast("Escolha uma imagem primeiro");return}
+  const {work,ctx,crop,cols,rows,patternMode}=captureSetupForPreview();const detected=patternMode==="beads"?convertGeometricTwoColorBeads(ctx,crop,cols,rows):null;
+  const canvas=$("geometryPreviewCanvas"),max=1100,scale=Math.min(1,max/Math.max(work.width,work.height));canvas.width=Math.max(1,Math.round(work.width*scale));canvas.height=Math.max(1,Math.round(work.height*scale));const out=canvas.getContext("2d");out.drawImage(work,0,0,canvas.width,canvas.height);
+  out.save();out.scale(scale,scale);out.lineWidth=Math.max(1,2/scale);out.strokeStyle="rgba(139,92,246,.55)";
+  for(let x=0;x<=cols;x++){const px=crop.x+x*crop.w/cols;out.beginPath();out.moveTo(px,crop.y);out.lineTo(px,crop.y+crop.h);out.stroke()}
+  for(let y=0;y<=rows;y++){const py=crop.y+y*crop.h/rows;out.beginPath();out.moveTo(crop.x,py);out.lineTo(crop.x+crop.w,py);out.stroke()}
+  if(detected){for(let y=0;y<rows;y++)for(let x=0;x<cols;x++){const id=detected.grid[y][x];if(!id)continue;const cx=crop.x+(x+.5)*crop.w/cols,cy=crop.y+(y+.5)*crop.h/rows,r=Math.max(2,Math.min(crop.w/cols,crop.h/rows)*.30);out.beginPath();out.arc(cx,cy,r,0,Math.PI*2);out.strokeStyle=id==="capture_red"?"rgba(220,38,38,.95)":"rgba(255,255,255,.95)";out.lineWidth=Math.max(2,3/scale);out.stroke()}}
+  out.restore();$("geometryPreviewInfo").textContent=`Prévia ${cols} × ${rows}: linhas lilás = grade; círculos = miçangas reconhecidas.`;$("geometryPreviewModal").classList.remove("hidden");
+}
+function closeGeometryPreview(){$("geometryPreviewModal")?.classList.add("hidden")}
+
 async function generateProjectFromImage(){
   if(!uploadedImage){
     toast("Escolha uma imagem primeiro");
@@ -1208,20 +1309,11 @@ async function generateProjectFromImage(){
   const name=$("imageProjectName").value.trim()||"Brinco convertido";
 
   const canvas=$("imageProcessCanvas");
-  const ctx=canvas.getContext("2d",{willReadFrequently:true});
-  // V5.30: preserva mais detalhe para reconhecer o formato arredondado e os cruzamentos entre contas.
   const maxSide=patternMode==="beads"?2400:1800;
-  const scale=Math.min(1,maxSide/Math.max(uploadedImage.naturalWidth,uploadedImage.naturalHeight));
-  canvas.width=Math.max(1,Math.round(uploadedImage.naturalWidth*scale));
-  canvas.height=Math.max(1,Math.round(uploadedImage.naturalHeight*scale));
-  ctx.imageSmoothingEnabled=true;
-  ctx.imageSmoothingQuality="high";
-  ctx.drawImage(uploadedImage,0,0,canvas.width,canvas.height);
-
-  // V5.29: quando há recorte livre, tudo fora do polígono fica transparente.
-  // A caixa geométrica do próprio polígono passa a ser a referência primária.
-  const manualBounds=manualCropBounds(canvas.width,canvas.height);
-  if(manualBounds) applyManualCropMask(ctx,canvas.width,canvas.height);
+  const ctx=renderAdjustedImageToCanvas(canvas,maxSide);
+  // V5.31: primeiro corrige os quatro cantos/perspectiva; o recorte livre já foi
+  // aplicado como máscara antes da correção geométrica.
+  const manualBounds=imageCropPoints.length>=3?alphaBounds(ctx,canvas.width,canvas.height):null;
   const objectCrop=manualBounds || (patternMode==="beads"&&redBeadBounds(ctx,canvas.width,canvas.height)) || cropTransparentBounds(ctx,canvas.width,canvas.height,bgMode);
   const aspect=objectCrop.h/objectCrop.w;
   const rows=rowsChoice==="auto"
@@ -1235,7 +1327,7 @@ async function generateProjectFromImage(){
     project={id:uid(),name,rows,cols,beadSize:3,technique:"Grade reta",
       palette:detected.palette,grid:detected.grid,
       createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),
-      source:"image",captureMode:"geometric-beads-v530",detectedColorIds:detected.palette.map(c=>c.id),captureCrop:crop,manualCrop:manualBounds?imageCropPoints.map(p=>({...p})):null};
+      source:"image",captureMode:"geometric-beads-v531",detectedColorIds:detected.palette.map(c=>c.id),captureCrop:crop,manualCrop:manualBounds?imageCropPoints.map(p=>({...p})):null,cornerQuad:imageQuadAdjusted?imageQuad.map(p=>({...p})):null};
     selectedColor="capture_red";tool="paint";symmetry=false;undoStack=[];redoStack=[];
     selectedRows.clear();selectedCols.clear();areaSelection=null;updateRowSelectionBar();updateColSelectionBar();
     zoomLevel=1;setProjectLabel();renderPalette();$("editorPaletteBar")?.classList.remove("paletteCollapsed");
@@ -1653,7 +1745,7 @@ function loadImageFromInput(input){
     $("imagePreview").src=url;
     $("imagePreviewWrap").classList.remove("hidden");
     requestAnimationFrame(()=>{syncCropCanvasSize();setupFreeCrop()});
-    toast("Imagem carregada — você pode fazer o recorte livre");
+    toast("Imagem carregada — ajuste cantos, zoom e recorte");
   };
   img.onerror=()=>{
     URL.revokeObjectURL(url);
@@ -1662,13 +1754,19 @@ function loadImageFromInput(input){
   img.src=url;
 }
 
-$("freeCropBtn").onclick=()=>{
-  if(!uploadedImage){toast("Escolha uma imagem primeiro");return}
-  imageCropActive=!imageCropActive;syncCropCanvasSize();setupFreeCrop();
-  $("imageCropStage")?.classList.toggle("cropActive",imageCropActive);
-  $("freeCropBtn")?.classList.toggle("activeTool",imageCropActive);
-  toast(imageCropActive?"Recorte livre: contorne a peça com o dedo":"Recorte livre pausado");
-};
+$("freeCropBtn").onclick=()=>{if(!uploadedImage){toast("Escolha uma imagem primeiro");return}setCropMode("free");syncCropCanvasSize();setupFreeCrop();toast("Recorte livre: contorne a peça com o dedo")};
+$("cornerCropBtn").onclick=()=>{if(!uploadedImage){toast("Escolha uma imagem primeiro");return}setCropMode("corners");syncCropCanvasSize();setupFreeCrop();toast("Arraste os 4 cantos para enquadrar a peça")};
+$("imageZoomOutBtn").onclick=()=>applyImagePreviewZoom(imagePreviewZoom-.25);
+$("imageZoomInBtn").onclick=()=>applyImagePreviewZoom(imagePreviewZoom+.25);
+$("imageZoomResetBtn").onclick=()=>applyImagePreviewZoom(1);
+$("rotateImageLeftBtn").onclick=()=>rotateQuad(-1);
+$("rotateImageRightBtn").onclick=()=>rotateQuad(1);
+$("straightenImageBtn").onclick=autoStraightenQuad;
+$("resetCornersBtn").onclick=()=>{imageQuad=defaultImageQuad();imageQuadAdjusted=false;drawFreeCrop();toast("Cantos restaurados")};
+$("previewGeometryBtn").onclick=showGeometryPreview;
+$("closeGeometryPreviewBtn").onclick=closeGeometryPreview;
+$("backGeometryPreviewBtn").onclick=closeGeometryPreview;
+$("confirmGeometryBtn").onclick=()=>{closeGeometryPreview();generateProjectFromImage()};
 $("undoCropBtn").onclick=()=>{
   if(!imageCropHistory.length){imageCropPoints=[]}else imageCropPoints=imageCropHistory.pop();
   drawFreeCrop();$("undoCropBtn").disabled=!imageCropHistory.length&&imageCropPoints.length===0;$("clearCropBtn").disabled=imageCropPoints.length===0;
@@ -1688,7 +1786,7 @@ $("galleryImageBtn").onclick=()=>{
 };
 $("cameraImageInput").onchange=(e)=>loadImageFromInput(e.target);
 $("imageInput").onchange=(e)=>loadImageFromInput(e.target);
-$("generateFromImageBtn").onclick=generateProjectFromImage;
+$("generateFromImageBtn").onclick=showGeometryPreview;
 $("imagePatternModeInput").onchange=(e)=>{
   if(e.target.value!=="repeat")return;
   $("imageColsInput").value="31";

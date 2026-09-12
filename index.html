@@ -216,12 +216,23 @@
               <img id="imagePreview" alt="Prévia da imagem selecionada" />
               <canvas id="imageCropCanvas" aria-label="Recorte livre da peça"></canvas>
             </div>
-            <div class="cropToolbar" aria-label="Ferramentas de recorte">
+            <div class="cropToolbar" aria-label="Ferramentas de enquadramento">
+              <button id="cornerCropBtn" type="button" class="secondary">◰ Ajustar 4 cantos</button>
               <button id="freeCropBtn" type="button" class="secondary">✂️ Recorte livre</button>
               <button id="undoCropBtn" type="button" class="secondary" disabled>↶ Desfazer</button>
               <button id="clearCropBtn" type="button" class="secondary" disabled>✕ Limpar</button>
             </div>
-            <p id="cropGuideText" class="helperText cropGuideText">Contorne somente a peça com o dedo. O algoritmo usará esse contorno para definir a geometria do desenho.</p>
+            <div class="imageAdjustToolbar" aria-label="Zoom e ângulo da imagem">
+              <button id="imageZoomOutBtn" type="button" class="secondary">−</button>
+              <strong id="imageZoomLabel">100%</strong>
+              <button id="imageZoomInBtn" type="button" class="secondary">+</button>
+              <button id="imageZoomResetBtn" type="button" class="secondary">100%</button>
+              <button id="rotateImageLeftBtn" type="button" class="secondary">↶ 1°</button>
+              <button id="rotateImageRightBtn" type="button" class="secondary">↷ 1°</button>
+              <button id="straightenImageBtn" type="button" class="secondary">📐 Endireitar</button>
+              <button id="resetCornersBtn" type="button" class="secondary">⟲ Cantos</button>
+            </div>
+            <p id="cropGuideText" class="helperText cropGuideText">Ajuste os cantos ou contorne somente a peça. Depois confira a Prévia da geometria.</p>
           </div>
 
           <div class="grid2">
@@ -343,7 +354,8 @@
 
           <div class="rowBtns">
             <button id="cancelImageBtn" class="secondary">Cancelar</button>
-            <button id="generateFromImageBtn" class="primary">Gerar diagrama</button>
+            <button id="previewGeometryBtn" class="secondary">◎ Prévia da geometria</button>
+            <button id="generateFromImageBtn" class="primary">Conferir antes de gerar</button>
           </div>
 
           <canvas id="imageProcessCanvas" class="hidden"></canvas>
@@ -381,6 +393,21 @@
     </main>
 
 
+
+    <div id="geometryPreviewModal" class="geometryPreviewModal hidden" role="dialog" aria-modal="true" aria-label="Prévia da geometria">
+      <div class="geometryPreviewPanel">
+        <div class="geometryPreviewHead">
+          <div><strong>Prévia da geometria</strong><small id="geometryPreviewInfo">Confira a posição das miçangas antes de gerar.</small></div>
+          <button id="closeGeometryPreviewBtn" type="button" class="secondary">✕</button>
+        </div>
+        <div class="geometryPreviewViewport"><canvas id="geometryPreviewCanvas"></canvas></div>
+        <p class="helperText">As linhas lilás mostram a grade calculada. Os círculos mostram as miçangas reconhecidas pelo algoritmo.</p>
+        <div class="rowBtns">
+          <button id="backGeometryPreviewBtn" type="button" class="secondary">← Voltar e corrigir</button>
+          <button id="confirmGeometryBtn" type="button" class="primary">✓ Gerar diagrama</button>
+        </div>
+      </div>
+    </div>
 
     <div id="replaceColorPicker" class="replaceColorPicker hidden" role="dialog" aria-modal="true" aria-label="Escolha nova cor">
       <div class="replaceColorPanel">

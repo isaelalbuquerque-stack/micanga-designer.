@@ -1,3 +1,16 @@
+# V5.31 — Prévia da geometria + ajuste de cantos e ângulo
+
+- A tela Imagem → Diagrama ganhou **4 cantos ajustáveis** para enquadrar a peça e corrigir perspectiva antes da leitura.
+- Zoom da fotografia de 100% a 400%, com botões `+`, `−` e retorno para 100%, permitindo conferir detalhes das miçangas.
+- Rotação fina em passos de 1° e botão **Endireitar** baseado na borda superior selecionada.
+- O recorte livre continua disponível e pode ser combinado com os quatro cantos.
+- A correção dos cantos é aplicada ao processamento antes da detecção das miçangas.
+- Nova tela **Prévia da geometria** antes da geração do diagrama.
+- A prévia desenha a grade calculada e círculos sobre as miçangas reconhecidas, permitindo voltar e corrigir enquadramento/recorte.
+- O botão final de geração fica dentro da prévia para reduzir conversões com geometria errada.
+- Mantida a leitura geométrica, filtragem de pontos isolados e branco puro `#FFFFFF`.
+- Cache do PWA atualizado para V5.31.
+
 # V5.30 — Geometria das miçangas
 
 - Mantido o recorte livre: tudo fora do contorno manual é ignorado.

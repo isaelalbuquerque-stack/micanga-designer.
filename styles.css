@@ -1093,3 +1093,33 @@ body.editor-mode .topbar p{font-size:.72rem;white-space:nowrap;overflow:hidden;t
 .cropToolbar button.activeTool{outline:2px solid var(--primary);background:var(--lilac-soft);color:var(--primary-dark)}
 .cropGuideText{width:100%;margin:8px 2px 2px;text-align:left}
 .cropGuideText.ready{color:var(--primary-dark);font-weight:750}
+
+
+/* =========================================================
+   V5.31 — ajuste de cantos, zoom/ângulo e prévia geométrica
+   ========================================================= */
+.imagePreviewWrap{display:block;overflow:auto;max-height:72vh;padding:8px;overscroll-behavior:contain}
+.imageCropStage{position:relative;display:block;width:100%;max-width:none;touch-action:none;user-select:none;transform-origin:top left}
+.imageCropStage img{display:block;width:100%;height:auto;max-width:none;max-height:none}
+#imageCropCanvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;z-index:3;cursor:crosshair}
+.imageCropStage.cornerActive #imageCropCanvas{pointer-events:auto;cursor:grab}
+.imageCropStage.cropActive #imageCropCanvas{pointer-events:auto;cursor:crosshair}
+.imageCropStage:not(.cropActive):not(.cornerActive) #imageCropCanvas{pointer-events:none}
+.imageCropStage.cornerActive{outline:2px solid #f59e0b;border-radius:12px}
+.cropToolbar,.imageAdjustToolbar{display:flex;gap:7px;flex-wrap:wrap;width:100%;padding:9px 2px 0;position:sticky;left:0}
+.cropToolbar button,.imageAdjustToolbar button{padding:8px 10px;font-size:.78rem}
+.imageAdjustToolbar strong{min-width:52px;display:grid;place-items:center;color:var(--primary-dark)}
+.geometryPreviewModal{position:fixed;inset:0;z-index:9999;background:rgba(28,16,40,.72);display:grid;place-items:center;padding:12px}
+.geometryPreviewModal.hidden{display:none}
+.geometryPreviewPanel{width:min(980px,100%);max-height:96vh;overflow:auto;background:#fff;border-radius:18px;padding:12px;box-shadow:0 22px 70px rgba(0,0,0,.28)}
+.geometryPreviewHead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}
+.geometryPreviewHead>div{display:grid;gap:3px}.geometryPreviewHead strong{font-size:1.05rem;color:var(--primary-dark)}.geometryPreviewHead small{color:var(--muted)}
+.geometryPreviewViewport{background:#2f2b33;border-radius:14px;overflow:auto;max-height:72vh;padding:8px;display:grid;place-items:start center}
+#geometryPreviewCanvas{display:block;max-width:none;background:#fff;border-radius:8px}
+@media(max-width:520px){
+  .imagePreviewWrap{max-height:66vh}
+  .cropToolbar,.imageAdjustToolbar{gap:5px}
+  .cropToolbar button,.imageAdjustToolbar button{font-size:.72rem;padding:7px 8px}
+  .geometryPreviewModal{padding:6px}.geometryPreviewPanel{border-radius:14px;padding:9px}
+  .geometryPreviewViewport{max-height:68vh}
+}
