@@ -273,32 +273,10 @@
           </div>
           <p class="helperText tableGuideText">A imagem será encaixada na proporção da tabela escolhida, sem esticar o desenho.</p>
 
-          <div class="grid2">
-            <label>Leitura do desenho
-              <select id="imagePatternModeInput">
-                <option value="beads" selected>Miçangas vermelhas e brancas</option>
-                <option value="photo">Converter a fotografia</option>
-                <option value="repeat">Reconstruir padrão repetido (experimental)</option>
-              </select>
-            </label>
-            <label>Repetição do padrão
-              <select id="imagePatternRowsInput">
-                <option value="4">A cada 4 linhas</option>
-                <option value="5">A cada 5 linhas</option>
-                <option value="6" selected>A cada 6 linhas</option>
-                <option value="7">A cada 7 linhas</option>
-                <option value="8">A cada 8 linhas</option>
-              </select>
-            </label>
+          <div class="selectedAreaNotice">
+            <strong>✂️ Leitura somente da área selecionada</strong>
+            <p class="helperText tableGuideText">O app analisa apenas o recorte definido por você. Nenhum padrão será repetido ou reconstruído automaticamente.</p>
           </div>
-          <label>Sequenciamento do padrão
-            <select id="imagePatternAxisInput">
-              <option value="both" selected>Linhas e colunas — bloco 6×6</option>
-              <option value="rows">Somente pelas linhas</option>
-              <option value="cols">Somente pelas colunas</option>
-            </select>
-          </label>
-          <p class="helperText tableGuideText">No padrão repetido, o app procura a sequência mais consistente no centro da peça, replica nas linhas e fecha a primeira e a última linha em branco.</p>
 
           <div class="grid2">
             <label>Quantidade de cores

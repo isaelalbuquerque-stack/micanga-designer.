@@ -1269,17 +1269,24 @@ function rebuildRepeatingPattern(grid,palette,period,axis="both"){
 }
 
 function captureSetupForPreview(){
+  if(imageCropPoints.length<3){
+    toast("Defina primeiro a área da peça com o Recorte livre");
+    return null;
+  }
   const cols=Math.max(2,Math.min(100,Number($("imageColsInput").value)||20));
-  const rowsChoice=$("imageRowsInput")?.value||"auto";const patternMode=$("imagePatternModeInput")?.value||"photo";const bgMode=$("backgroundModeInput").value;
-  const work=document.createElement("canvas");const ctx=renderAdjustedImageToCanvas(work,1600);
-  const masked=imageCropPoints.length>=3?alphaBounds(ctx,work.width,work.height):null;
-  const objectCrop=masked || (patternMode==="beads"&&redBeadBounds(ctx,work.width,work.height)) || cropTransparentBounds(ctx,work.width,work.height,bgMode);
-  const aspect=objectCrop.h/objectCrop.w;const rows=rowsChoice==="auto"?Math.max(2,Math.min(100,Math.round(cols*aspect))):Math.max(2,Math.min(100,Number(rowsChoice)||Math.round(cols*aspect)));
-  const crop=fitCropToGrid(objectCrop,work.width,work.height,cols,rows);return {work,ctx,crop,cols,rows,patternMode};
+  const rowsChoice=$("imageRowsInput")?.value||"auto";
+  const work=document.createElement("canvas");const ctx=renderAdjustedImageToCanvas(work,2000);
+  const objectCrop=alphaBounds(ctx,work.width,work.height);
+  if(!objectCrop){toast("Não consegui ler a área selecionada");return null}
+  const aspect=objectCrop.h/objectCrop.w;
+  const rows=rowsChoice==="auto"?Math.max(2,Math.min(100,Math.round(cols*aspect))):Math.max(2,Math.min(100,Number(rowsChoice)||Math.round(cols*aspect)));
+  const crop=fitCropToGrid(objectCrop,work.width,work.height,cols,rows);
+  return {work,ctx,crop,cols,rows};
 }
 function showGeometryPreview(){
   if(!uploadedImage){toast("Escolha uma imagem primeiro");return}
-  const {work,ctx,crop,cols,rows,patternMode}=captureSetupForPreview();const detected=patternMode==="beads"?convertGeometricTwoColorBeads(ctx,crop,cols,rows):null;
+  const setup=captureSetupForPreview();if(!setup)return;
+  const {work,ctx,crop,cols,rows}=setup;const detected=convertGeometricTwoColorBeads(ctx,crop,cols,rows);
   const canvas=$("geometryPreviewCanvas"),max=1100,scale=Math.min(1,max/Math.max(work.width,work.height));canvas.width=Math.max(1,Math.round(work.width*scale));canvas.height=Math.max(1,Math.round(work.height*scale));const out=canvas.getContext("2d");out.drawImage(work,0,0,canvas.width,canvas.height);
   out.save();out.scale(scale,scale);out.lineWidth=Math.max(1,2/scale);out.strokeStyle="rgba(139,92,246,.55)";
   for(let x=0;x<=cols;x++){const px=crop.x+x*crop.w/cols;out.beginPath();out.moveTo(px,crop.y);out.lineTo(px,crop.y+crop.h);out.stroke()}
@@ -1301,20 +1308,22 @@ async function generateProjectFromImage(){
   const bgMode=$("backgroundModeInput").value;
   const fidelityMode=$("imageFidelityInput")?.value||"faithful";
   const useRealColors=($("imageRealColorsInput")?.value||"real")==="real";
-  const patternMode=$("imagePatternModeInput")?.value||"photo";
-  const patternRows=Math.max(2,Math.min(20,Number($("imagePatternRowsInput")?.value)||6));
-  const patternAxis=$("imagePatternAxisInput")?.value||"both";
   const faithful=fidelityMode==="faithful";
+  if(imageCropPoints.length<3){
+    toast("Defina primeiro a área da peça com o Recorte livre");
+    return;
+  }
   const sensitivity=Number($("imageSensitivityInput")?.value)||0.10;
   const name=$("imageProjectName").value.trim()||"Brinco convertido";
 
   const canvas=$("imageProcessCanvas");
-  const maxSide=patternMode==="beads"?2400:1800;
+  const maxSide=2400;
   const ctx=renderAdjustedImageToCanvas(canvas,maxSide);
-  // V5.31: primeiro corrige os quatro cantos/perspectiva; o recorte livre já foi
-  // aplicado como máscara antes da correção geométrica.
-  const manualBounds=imageCropPoints.length>=3?alphaBounds(ctx,canvas.width,canvas.height):null;
-  const objectCrop=manualBounds || (patternMode==="beads"&&redBeadBounds(ctx,canvas.width,canvas.height)) || cropTransparentBounds(ctx,canvas.width,canvas.height,bgMode);
+  // V5.32: somente a área recortada manualmente participa da leitura.
+  // Não há reconstrução nem repetição automática de padrão.
+  const manualBounds=alphaBounds(ctx,canvas.width,canvas.height);
+  if(!manualBounds){toast("Não consegui ler a área selecionada");return}
+  const objectCrop=manualBounds;
   const aspect=objectCrop.h/objectCrop.w;
   const rows=rowsChoice==="auto"
     ? Math.max(2,Math.min(100,Math.round(cols*aspect)))
@@ -1322,18 +1331,18 @@ async function generateProjectFromImage(){
   // A área amostrada assume a mesma proporção da grade escolhida. Isso impede
   // que uma tabela larga ou alta deforme o objeto fotografado.
   const crop=fitCropToGrid(objectCrop,canvas.width,canvas.height,cols,rows);
-  if(patternMode==="beads"){
+  {
     const detected=convertGeometricTwoColorBeads(ctx,crop,cols,rows);
     project={id:uid(),name,rows,cols,beadSize:3,technique:"Grade reta",
       palette:detected.palette,grid:detected.grid,
       createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),
-      source:"image",captureMode:"geometric-beads-v531",detectedColorIds:detected.palette.map(c=>c.id),captureCrop:crop,manualCrop:manualBounds?imageCropPoints.map(p=>({...p})):null,cornerQuad:imageQuadAdjusted?imageQuad.map(p=>({...p})):null};
+      source:"image",captureMode:"selected-area-v532",detectedColorIds:detected.palette.map(c=>c.id),captureCrop:crop,manualCrop:imageCropPoints.map(p=>({...p})),cornerQuad:imageQuadAdjusted?imageQuad.map(p=>({...p})):null};
     selectedColor="capture_red";tool="paint";symmetry=false;undoStack=[];redoStack=[];
     selectedRows.clear();selectedCols.clear();areaSelection=null;updateRowSelectionBar();updateColSelectionBar();
     zoomLevel=1;setProjectLabel();renderPalette();$("editorPaletteBar")?.classList.remove("paletteCollapsed");
     $("paletteBtn")?.classList.add("activeTool");updateToolButtons();renderGrid();showView("editorView");
     setupZoomGestures();applyZoom(1);setLoomMode(false);
-    toast("Geometria das miçangas detectada — confira o diagrama");
+    toast("Área selecionada convertida — confira o diagrama");
     return;
   }
   const backgroundRgb=borderBackgroundColor(ctx,canvas.width,canvas.height);
@@ -1375,7 +1384,7 @@ async function generateProjectFromImage(){
       grid[y][x]=nearestPaletteId(...info.rgb,imgPalette);
     }
   }
-  const finalGrid=patternMode==="repeat"?rebuildRepeatingPattern(grid,imgPalette,patternRows,patternAxis):grid;
+  const finalGrid=grid;
 
   project={
     id:uid(),name,rows,cols,beadSize:3,technique:"Grade reta",
@@ -1385,7 +1394,7 @@ async function generateProjectFromImage(){
     detectedColorIds:imgPalette.map(c=>c.id),
     sourceImage:$("imagePreview")?.src||null,
     captureCrop:crop,objectCrop,
-    captureTable:{rows,cols},patternMode,patternRows,patternAxis,useRealColors,manualCrop:manualBounds?imageCropPoints.map(p=>({...p})):null
+    captureTable:{rows,cols},mode:"selected-area",useRealColors,manualCrop:imageCropPoints.map(p=>({...p}))
   };
 
   selectedColor=project.palette[0].id;
@@ -1787,13 +1796,6 @@ $("galleryImageBtn").onclick=()=>{
 $("cameraImageInput").onchange=(e)=>loadImageFromInput(e.target);
 $("imageInput").onchange=(e)=>loadImageFromInput(e.target);
 $("generateFromImageBtn").onclick=showGeometryPreview;
-$("imagePatternModeInput").onchange=(e)=>{
-  if(e.target.value!=="repeat")return;
-  $("imageColsInput").value="31";
-  $("imageRowsInput").value="61";
-  $("imageColorsInput").value="2";
-  toast("Padrão repetido: tabela ajustada para 31 × 61 e 2 cores");
-};
 $("captureAddColorBtn").onclick=()=>$("addColorBtn").click();
 $("cancelNewBtn").onclick=()=>showView("homeView");
 $("createProjectBtn").onclick=()=>{

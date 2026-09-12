@@ -1,3 +1,12 @@
+# JPmiçangas Designer V5.32
+
+- Removida a opção **Reconstruir padrão repetido** da captura por imagem.
+- Removidos os controles de período e sequenciamento do padrão na tela de imagem.
+- A conversão agora usa **somente a área definida pelo Recorte livre**.
+- Se não houver uma área selecionada, a Prévia da geometria e a geração do diagrama pedem que o usuário faça o recorte primeiro.
+- Nenhuma linha, coluna ou bloco é replicado automaticamente durante a captura.
+- Mantidos: zoom, ajuste de cantos, perspectiva e Prévia da geometria da V5.31.
+
 # V5.31 — Prévia da geometria + ajuste de cantos e ângulo
 
 - A tela Imagem → Diagrama ganhou **4 cantos ajustáveis** para enquadrar a peça e corrigir perspectiva antes da leitura.
