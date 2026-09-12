@@ -1,3 +1,13 @@
+# V5.23 — Captura fiel + coluna de correção de cores
+
+- A conversão agora recorta automaticamente o objeto também no modo Fidelidade máxima, evitando transformar margens e fundo da fotografia em miçangas.
+- O fundo é estimado pelas bordas da imagem, melhorando o recorte em fotos cujo fundo não é branco ou preto puro.
+- A proporção automática de linhas e colunas passa a usar somente a área útil recortada.
+- Projetos criados por Foto → Diagrama abrem com uma coluna vertical fixa ao lado da grade contendo todas as cores detectadas.
+- Ao selecionar uma cor nessa coluna, basta tocar nas miçangas incorretas para corrigir falhas da captura.
+- A coluna não cobre a grade, acompanha a rolagem e possui atalho para adicionar outra cor.
+- Mantidos o visual compacto, a borracha corrigida e todas as ferramentas da V5.22.
+
 # V5.22 — Visual compacto + borracha corrigida
 
 - Interface do editor reorganizada conforme o visual aprovado: cabeçalho com Abrir/Salvar/Compartilhar/Menu, barra principal compacta, paleta em faixa única, modo/zoom/linhas/colunas compactos e exportações abaixo da tabela.

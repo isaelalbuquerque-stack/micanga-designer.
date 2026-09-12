@@ -731,6 +731,17 @@ function isBackgroundPixel(r,g,b,mode){
   return false;
 }
 
+function borderBackgroundColor(ctx,w,h){
+  const data=ctx.getImageData(0,0,w,h).data;
+  const samples=[];
+  const stride=Math.max(1,Math.floor(Math.min(w,h)/120));
+  const add=(x,y)=>{const i=(y*w+x)*4;if(data[i+3]>90)samples.push([data[i],data[i+1],data[i+2]])};
+  for(let x=0;x<w;x+=stride){add(x,0);add(x,h-1)}
+  for(let y=0;y<h;y+=stride){add(0,y);add(w-1,y)}
+  if(!samples.length) return [255,255,255];
+  return [0,1,2].map(ch=>{const values=samples.map(s=>s[ch]).sort((a,b)=>a-b);return values[Math.floor(values.length/2)]});
+}
+
 function cellColorFromRegion(ctx, x0, y0, x1, y1, bgMode, faithful=false){
   const w=Math.max(1,x1-x0), h=Math.max(1,y1-y0);
   const data=ctx.getImageData(x0,y0,w,h).data;
@@ -855,17 +866,23 @@ function nearestPaletteId(r,g,b,palette){
 
 function cropTransparentBounds(ctx,w,h,bgMode){
   const data=ctx.getImageData(0,0,w,h).data;
+  const border=borderBackgroundColor(ctx,w,h);
+  const adaptiveLimit=bgMode==="none" ? 34*34 : 24*24;
   let minX=w,minY=h,maxX=-1,maxY=-1;
   for(let y=0;y<h;y++){
     for(let x=0;x<w;x++){
       const i=(y*w+x)*4;
       const r=data[i],g=data[i+1],b=data[i+2],a=data[i+3];
-      if(a>90 && !isBackgroundPixel(r,g,b,bgMode)){
+      const differsFromBorder=colorDistance([r,g,b],border)>adaptiveLimit;
+      if(a>90 && !isBackgroundPixel(r,g,b,bgMode) && differsFromBorder){
         if(x<minX)minX=x;if(x>maxX)maxX=x;if(y<minY)minY=y;if(y>maxY)maxY=y;
       }
     }
   }
   if(maxX<0) return {x:0,y:0,w,h};
+  const pad=Math.max(2,Math.round(Math.max(maxX-minX,maxY-minY)*.025));
+  minX=Math.max(0,minX-pad);minY=Math.max(0,minY-pad);
+  maxX=Math.min(w-1,maxX+pad);maxY=Math.min(h-1,maxY+pad);
   return {x:minX,y:minY,w:maxX-minX+1,h:maxY-minY+1};
 }
 
@@ -894,11 +911,9 @@ async function generateProjectFromImage(){
   ctx.imageSmoothingQuality="high";
   ctx.drawImage(uploadedImage,0,0,canvas.width,canvas.height);
 
-  // Em fidelidade máxima preservamos toda a imagem. Ao detectar fundo, recortamos
-  // apenas o conteúdo útil para evitar bordas externas virarem linhas/colunas extras.
-  const crop=faithful
-    ? {x:0,y:0,w:canvas.width,h:canvas.height}
-    : cropTransparentBounds(ctx,canvas.width,canvas.height,bgMode);
+  // V5.23: os dois modos recortam primeiro o objeto. Fidelidade máxima continua
+  // preenchendo todas as células, mas não transforma margens da foto em miçangas.
+  const crop=cropTransparentBounds(ctx,canvas.width,canvas.height,bgMode);
   const aspect=crop.h/crop.w;
   const rows=rowsChoice==="auto"
     ? Math.max(2,Math.min(100,Math.round(cols*aspect)))
@@ -940,7 +955,10 @@ async function generateProjectFromImage(){
     id:uid(),name,rows,cols,beadSize:3,technique:"Grade reta",
     palette:imgPalette.map(({rgb,...rest})=>rest),grid,
     createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),
-    source:"image",captureMode:fidelityMode
+    source:"image",captureMode:fidelityMode,
+    detectedColorIds:imgPalette.map(c=>c.id),
+    sourceImage:$("imagePreview")?.src||null,
+    captureCrop:crop
   };
 
   selectedColor=project.palette[0].id;
@@ -1161,7 +1179,31 @@ function renderPalette(){
     b.title=`${color.name} (${color.code})`;
     b.onclick=()=>{selectedColor=color.id; tool="paint"; updateToolButtons(); renderPalette()};
     wrap.appendChild(b);
-  })
+  });
+  renderCapturePaletteColumn();
+}
+
+function selectCaptureColor(id){
+  selectedColor=id;tool="paint";updateToolButtons();renderPalette();
+  toast("Cor selecionada: toque na miçanga que deseja corrigir");
+}
+
+function renderCapturePaletteColumn(){
+  const column=$("capturePaletteColumn"),wrap=$("capturePaletteColors");
+  if(!column||!wrap||!project) return;
+  const ids=project.detectedColorIds||[];
+  const colors=ids.map(id=>project.palette.find(c=>c.id===id)).filter(Boolean);
+  column.classList.toggle("hidden",project.source!=="image"||!colors.length);
+  wrap.innerHTML="";
+  colors.forEach(color=>{
+    const b=document.createElement("button");
+    b.type="button";b.className="captureColorBtn"+(color.id===selectedColor?" selected":"");
+    b.style.setProperty("--capture-color",color.hex);
+    b.innerHTML=`<span></span><small>${color.name.replace("Cor imagem ","")}</small>`;
+    b.title=`${color.name} (${color.hex})`;
+    b.onclick=()=>selectCaptureColor(color.id);
+    wrap.appendChild(b);
+  });
 }
 
 function updateToolButtons(){
@@ -1296,6 +1338,7 @@ $("galleryImageBtn").onclick=()=>{
 $("cameraImageInput").onchange=(e)=>loadImageFromInput(e.target);
 $("imageInput").onchange=(e)=>loadImageFromInput(e.target);
 $("generateFromImageBtn").onclick=generateProjectFromImage;
+$("captureAddColorBtn").onclick=()=>$("addColorBtn").click();
 $("cancelNewBtn").onclick=()=>showView("homeView");
 $("createProjectBtn").onclick=()=>{
   project=newProjectData(); selectedColor=project.palette[0].id; undoStack=[]; redoStack=[]; selectedRows.clear(); updateRowSelectionBar();
@@ -1359,6 +1402,10 @@ $("addColorBtn").onclick=()=>{
   const code=prompt("Código da miçanga:","009")||"";
   const id="c_"+Date.now();
   project.palette.push({id,name,code,hex});
+  if(project.source==="image"){
+    if(!Array.isArray(project.detectedColorIds)) project.detectedColorIds=[];
+    project.detectedColorIds.push(id);
+  }
   selectedColor=id; renderPalette(); updateStats();
 }
 

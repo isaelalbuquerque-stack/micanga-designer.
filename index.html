@@ -164,12 +164,19 @@
             <div class="rowSelectionInfo"><strong>Área:</strong> toque em ▣ e marque 2 cantos</div>
             <button id="areaColorBtn" class="secondary">🎨 Cor</button><button id="areaEraseBtn" class="secondary">🧽 Apagar</button><button id="areaMirrorHBtn" class="secondary">⇆</button><button id="areaMirrorVBtn" class="secondary">⇅</button><button id="clearAreaBtn" class="secondary">✕</button>
           </div>
-          <div id="gridViewport">
-            <div id="gridStage">
-              <div class="rulerCorner" aria-hidden="true"></div>
-              <div id="columnRuler" class="columnRuler" aria-label="Colunas"></div>
-              <div id="rowRuler" class="rowRuler" aria-label="Linhas"></div>
-              <div id="beadGrid" aria-label="Grade de miçangas"></div>
+          <div id="captureEditorLayout" class="captureEditorLayout">
+            <aside id="capturePaletteColumn" class="capturePaletteColumn hidden" aria-label="Cores detectadas na captura">
+              <strong>Cores da foto</strong>
+              <div id="capturePaletteColors" class="capturePaletteColors"></div>
+              <button id="captureAddColorBtn" type="button" class="small" title="Adicionar outra cor">＋</button>
+            </aside>
+            <div id="gridViewport">
+              <div id="gridStage">
+                <div class="rulerCorner" aria-hidden="true"></div>
+                <div id="columnRuler" class="columnRuler" aria-label="Colunas"></div>
+                <div id="rowRuler" class="rowRuler" aria-label="Linhas"></div>
+                <div id="beadGrid" aria-label="Grade de miçangas"></div>
+              </div>
             </div>
           </div>
         </div>
