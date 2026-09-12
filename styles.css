@@ -1204,3 +1204,16 @@ body.editor-mode .topbar p{font-size:.72rem;white-space:nowrap;overflow:hidden;t
   .geometryPreviewGridSetup button{grid-column:1/-1;width:100%}
   .geometryPreviewViewport{min-height:300px;max-height:58vh}
 }
+
+
+/* V5.37 — zoom funcional e barra fixa na prévia */
+.geometryPreviewViewBar{position:sticky;top:0;z-index:12;background:var(--card);border-bottom:1px solid var(--border);padding:7px 4px 9px;margin:0 -2px 6px;box-shadow:0 5px 10px rgba(80,45,110,.08)}
+.geometryPreviewViewBar button{min-width:44px;min-height:44px;font-weight:800}
+.geometryPreviewViewport{touch-action:none!important;scrollbar-width:auto}
+#geometryPreviewCanvas{touch-action:none!important}
+@media(max-width:520px){
+  .geometryPreviewViewBar{gap:5px}
+  .geometryPreviewViewBar button{padding:7px 9px;font-size:.76rem}
+  .geometryPreviewViewBar strong{min-width:46px}
+  .geometryPreviewViewport{min-height:340px;max-height:60vh}
+}

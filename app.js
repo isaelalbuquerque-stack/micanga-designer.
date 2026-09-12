@@ -96,6 +96,7 @@ let geometryPreviewColorId = "capture_red";
 let geometryPreviewZoom = 1;
 let geometryPreviewMode = "edit";
 let geometryPreviewPan = null;
+let geometryPreviewPinch = null;
 let imageMagnifierVisible = false;
 const IMAGE_PREVIEW_ZOOM_MIN = 1;
 const IMAGE_PREVIEW_ZOOM_MAX = 6;
@@ -1399,13 +1400,37 @@ function geometryPreviewCellSize(){
   const longest=Math.max(s.cols,s.rows);
   return longest>80?16:longest>60?18:longest>45?20:24;
 }
-function updateGeometryPreviewZoom(){
-  const canvas=$("geometryPreviewCanvas"),label=$("geometryPreviewZoomLabel");
+function updateGeometryPreviewZoom(focusClientX=null,focusClientY=null,oldZoom=null){
+  const canvas=$("geometryPreviewCanvas"),label=$("geometryPreviewZoomLabel"),viewport=$("geometryPreviewViewport");
   if(!canvas)return;
-  geometryPreviewZoom=Math.max(.12,Math.min(3.5,geometryPreviewZoom));
+  const before=oldZoom||geometryPreviewZoom;
+  geometryPreviewZoom=Math.max(.10,Math.min(5,geometryPreviewZoom));
+  let localX=null,localY=null;
+  if(viewport&&focusClientX!=null&&focusClientY!=null){
+    const vr=viewport.getBoundingClientRect();
+    localX=viewport.scrollLeft+(focusClientX-vr.left);
+    localY=viewport.scrollTop+(focusClientY-vr.top);
+  }
   canvas.style.width=Math.max(1,Math.round(canvas.width*geometryPreviewZoom))+"px";
   canvas.style.height=Math.max(1,Math.round(canvas.height*geometryPreviewZoom))+"px";
+  if(viewport&&localX!=null&&localY!=null&&before>0){
+    const ratio=geometryPreviewZoom/before;
+    const vr=viewport.getBoundingClientRect();
+    viewport.scrollLeft=Math.max(0,localX*ratio-(focusClientX-vr.left));
+    viewport.scrollTop=Math.max(0,localY*ratio-(focusClientY-vr.top));
+  }
   if(label)label.textContent=Math.round(geometryPreviewZoom*100)+"%";
+}
+function setGeometryPreviewZoom(next,focusClientX=null,focusClientY=null){
+  const old=geometryPreviewZoom;geometryPreviewZoom=next;updateGeometryPreviewZoom(focusClientX,focusClientY,old);
+}
+function fitGeometryPreviewWidth(){
+  const viewport=$("geometryPreviewViewport"),canvas=$("geometryPreviewCanvas");if(!viewport||!canvas)return;
+  setGeometryPreviewZoom(Math.max(.10,Math.min(2,(viewport.clientWidth-18)/canvas.width)));
+  viewport.scrollLeft=0;viewport.scrollTop=0;
+}
+function resetGeometryPreviewZoom(){
+  const viewport=$("geometryPreviewViewport");setGeometryPreviewZoom(1);if(viewport){viewport.scrollLeft=0;viewport.scrollTop=0}
 }
 function setGeometryPreviewMode(mode){
   geometryPreviewMode=mode;
@@ -1418,8 +1443,7 @@ function fitGeometryPreview(){
   const viewport=$("geometryPreviewViewport"),canvas=$("geometryPreviewCanvas");if(!viewport||!canvas)return;
   const zx=(viewport.clientWidth-18)/canvas.width;
   const zy=(viewport.clientHeight-18)/canvas.height;
-  geometryPreviewZoom=Math.max(.12,Math.min(1,Math.min(zx,zy)));
-  updateGeometryPreviewZoom();
+  setGeometryPreviewZoom(Math.max(.10,Math.min(1,Math.min(zx,zy))));
   viewport.scrollLeft=0;viewport.scrollTop=0;
 }
 function renderGeometryPreview(){
@@ -1499,7 +1523,7 @@ function rebuildGeometryPreview(){
   const detected=convertGeometricTwoColorBeads(setup.ctx,setup.crop,setup.cols,setup.rows);
   geometryPreviewState={work:setup.work,crop:setup.crop,cols:setup.cols,rows:setup.rows,grid:detected.grid.map(r=>r.slice()),palette:detected.palette.map(c=>({...c}))};
   geometryPreviewTool="paint";geometryPreviewColorId=detected.palette.find(c=>c.id==="capture_red")?.id||detected.palette[0]?.id;
-  geometryPreviewZoom=1;renderGeometryPreview();setTimeout(fitGeometryPreview,0);toast(`Grade atualizada para ${setup.rows} × ${setup.cols}`);
+  geometryPreviewZoom=1;renderGeometryPreview();setTimeout(fitGeometryPreviewWidth,0);toast(`Grade atualizada para ${setup.rows} × ${setup.cols}`);
 }
 function showGeometryPreview(){
   if(!uploadedImage){toast("Escolha uma imagem primeiro");return}
@@ -1508,7 +1532,7 @@ function showGeometryPreview(){
   geometryPreviewState={work,crop,cols,rows,grid:detected.grid.map(r=>r.slice()),palette:detected.palette.map(c=>({...c}))};
   geometryPreviewTool="paint";geometryPreviewColorId=detected.palette.find(c=>c.id==="capture_red")?.id||detected.palette[0]?.id;
   geometryPreviewZoom=1;geometryPreviewMode="edit";
-  renderGeometryPreview();$("geometryPreviewModal").classList.remove("hidden");setTimeout(fitGeometryPreview,30);
+  renderGeometryPreview();$("geometryPreviewModal").classList.remove("hidden");setTimeout(fitGeometryPreviewWidth,30);
 }
 function closeGeometryPreview(){$("geometryPreviewModal")?.classList.add("hidden");geometryPreviewPan=null}
 
@@ -2020,12 +2044,36 @@ function finishGeometryPreviewPan(e){
 }
 $("geometryPreviewCanvas")?.addEventListener("pointerup",finishGeometryPreviewPan);
 $("geometryPreviewCanvas")?.addEventListener("pointercancel",finishGeometryPreviewPan);
+
+// V5.37: zoom por pinça diretamente na prévia, independente do modo Editar/Mover.
+{
+  const vp=$("geometryPreviewViewport");
+  if(vp){
+    const pts=new Map();
+    const dist=()=>{const a=[...pts.values()];if(a.length<2)return 0;return Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y)};
+    const center=()=>{const a=[...pts.values()];return a.length<2?null:{x:(a[0].x+a[1].x)/2,y:(a[0].y+a[1].y)/2}};
+    vp.addEventListener("pointerdown",e=>{
+      if(e.pointerType!=="mouse"){pts.set(e.pointerId,{x:e.clientX,y:e.clientY});vp.setPointerCapture?.(e.pointerId);}
+      if(pts.size===2){geometryPreviewPinch={distance:dist(),zoom:geometryPreviewZoom};geometryPreviewPan=null;}
+    },{passive:false});
+    vp.addEventListener("pointermove",e=>{
+      if(!pts.has(e.pointerId))return;pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+      if(pts.size===2&&geometryPreviewPinch){
+        e.preventDefault();const d=dist(),c=center();if(d>0&&c)setGeometryPreviewZoom(geometryPreviewPinch.zoom*(d/geometryPreviewPinch.distance),c.x,c.y);
+      }
+    },{passive:false});
+    const end=e=>{pts.delete(e.pointerId);if(pts.size<2)geometryPreviewPinch=null};
+    vp.addEventListener("pointerup",end);vp.addEventListener("pointercancel",end);
+  }
+}
 $("geometryPreviewAddColorBtn")?.addEventListener("click",()=>$("geometryPreviewColorInput")?.click());
 $("geometryPreviewColorInput")?.addEventListener("input",e=>addGeometryPreviewColor(e.target.value));
 $("geometryPreviewEditBtn")?.addEventListener("click",()=>setGeometryPreviewMode("edit"));
 $("geometryPreviewPanBtn")?.addEventListener("click",()=>setGeometryPreviewMode("pan"));
-$("geometryPreviewZoomOutBtn")?.addEventListener("click",()=>{geometryPreviewZoom-=.15;updateGeometryPreviewZoom()});
-$("geometryPreviewZoomInBtn")?.addEventListener("click",()=>{geometryPreviewZoom+=.15;updateGeometryPreviewZoom()});
+$("geometryPreviewZoomOutBtn")?.addEventListener("click",()=>setGeometryPreviewZoom(geometryPreviewZoom/1.25));
+$("geometryPreviewZoomInBtn")?.addEventListener("click",()=>setGeometryPreviewZoom(geometryPreviewZoom*1.25));
+$("geometryPreviewZoom100Btn")?.addEventListener("click",resetGeometryPreviewZoom);
+$("geometryPreviewFitWidthBtn")?.addEventListener("click",fitGeometryPreviewWidth);
 $("geometryPreviewFitBtn")?.addEventListener("click",fitGeometryPreview);
 $("geometryPreviewRebuildBtn")?.addEventListener("click",rebuildGeometryPreview);
 $("undoCropBtn").onclick=()=>{

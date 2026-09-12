@@ -1,3 +1,13 @@
+# JPmiçangas Designer V5.37
+
+- Prévia abre em **Ajustar à largura**, evitando o diagrama estreito demais.
+- Barra de zoom fica fixa no topo da prévia.
+- Zoom com `−`, `+`, `100%`, `Largura` e `Inteira`.
+- Zoom por pinça com dois dedos, mantendo o ponto focal.
+- Limite de zoom ampliado para 500%.
+- Mantidos editar/mover, linhas/colunas e inserir/remover/trocar miçangas.
+- Cache do PWA atualizado para V5.37.
+
 # JPmiçangas Designer V5.36
 
 - Prévia da geometria refeita como **tabela de conferência**, com letras nas colunas e números nas linhas.
