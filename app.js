@@ -935,6 +935,73 @@ function fitCropToGrid(crop,canvasW,canvasH,cols,rows){
   return {x:ix,y:iy,w:Math.max(1,Math.min(canvasW-ix,Math.floor(width))),h:Math.max(1,Math.min(canvasH-iy,Math.floor(height)))};
 }
 
+function isRedBead(r,g,b){
+  return r>85 && r>g*1.30 && r>b*1.22 && r-g>28;
+}
+
+function redBeadBounds(ctx,w,h){
+  const data=ctx.getImageData(0,0,w,h).data;
+  const rowCounts=new Uint32Array(h),colCounts=new Uint32Array(w);
+  for(let y=0;y<h;y+=2)for(let x=0;x<w;x+=2){
+    const i=(y*w+x)*4;
+    if(isRedBead(data[i],data[i+1],data[i+2])){rowCounts[y]++;colCounts[x]++}
+  }
+  const rowMin=Math.max(2,Math.floor(w*.006)),colMin=Math.max(2,Math.floor(h*.006));
+  let top=rowCounts.findIndex(n=>n>=rowMin),bottom=-1,left=colCounts.findIndex(n=>n>=colMin),right=-1;
+  for(let y=h-1;y>=0;y--)if(rowCounts[y]>=rowMin){bottom=y;break}
+  for(let x=w-1;x>=0;x--)if(colCounts[x]>=colMin){right=x;break}
+  if(top<0||left<0||bottom<=top||right<=left)return null;
+  const padX=Math.round((right-left)*.07),padY=Math.round((bottom-top)*.035);
+  left=Math.max(0,left-padX);right=Math.min(w-1,right+padX);
+  top=Math.max(0,top-padY);bottom=Math.min(h-1,bottom+padY);
+  return {x:left,y:top,w:right-left+1,h:bottom-top+1};
+}
+
+function convertTwoColorBeads(ctx,crop,cols,rows){
+  const pixels=ctx.getImageData(0,0,ctx.canvas.width,ctx.canvas.height).data;
+  const width=ctx.canvas.width;
+  const red=Array.from({length:rows},()=>Array(cols).fill(false));
+  const light=Array.from({length:rows},()=>Array(cols).fill(false));
+  for(let y=0;y<rows;y++)for(let x=0;x<cols;x++){
+    const x0=Math.floor(crop.x+x*crop.w/cols),x1=Math.ceil(crop.x+(x+1)*crop.w/cols);
+    const y0=Math.floor(crop.y+y*crop.h/rows),y1=Math.ceil(crop.y+(y+1)*crop.h/rows);
+    let redCount=0,lightCount=0,total=0;
+    const step=Math.max(1,Math.floor(Math.min(x1-x0,y1-y0)/7));
+    for(let py=y0;py<y1;py+=step)for(let px=x0;px<x1;px+=step){
+      if(px<0||px>=width||py<0||py>=ctx.canvas.height)continue;
+      const i=(py*width+px)*4,r=pixels[i],g=pixels[i+1],b=pixels[i+2];
+      if(isRedBead(r,g,b))redCount++;
+      if(Math.min(r,g,b)>142&&Math.max(r,g,b)-Math.min(r,g,b)<65)lightCount++;
+      total++;
+    }
+    red[y][x]=redCount>=Math.max(2,total*.11);
+    light[y][x]=lightCount>=Math.max(2,total*.28);
+  }
+  // A silhueta é construída por fileira, seguindo a largura da área tecida.
+  // Fios finos e textura isolada fora da peça não criam contas.
+  const spans=red.map((row,y)=>{
+    const indices=row.flatMap((on,x)=>on?[x]:[]);
+    if(!indices.length)return null;
+    const margin=Math.max(2,Math.ceil(cols*.10));
+    return [Math.max(0,indices[0]-margin),Math.min(cols-1,indices.at(-1)+margin)];
+  });
+  for(let y=0;y<rows;y++)if(!spans[y]){
+    for(let d=1;d<Math.ceil(rows*.12);d++){
+      if(spans[y-d]){spans[y]=spans[y-d].slice();break}
+      if(spans[y+d]){spans[y]=spans[y+d].slice();break}
+    }
+  }
+  const grid=Array.from({length:rows},(_,y)=>Array.from({length:cols},(_,x)=>{
+    const span=spans[y];if(!span||x<span[0]||x>span[1])return null;
+    if(red[y][x])return "capture_red";
+    return light[y][x]?"capture_white":null;
+  }));
+  return {grid,palette:[
+    {id:"capture_white",name:"Branco",code:"002",hex:"#ffffff"},
+    {id:"capture_red",name:"Vermelho",code:"003",hex:"#d8342a"}
+  ]};
+}
+
 function buildCleanCaptureMask(cells,threshold){
   const rows=cells.length,cols=cells[0]?.length||0;
   const original=cells.map(row=>row.map(info=>!!info.rgb&&info.coverage>=threshold));
@@ -1021,7 +1088,7 @@ async function generateProjectFromImage(){
   ctx.drawImage(uploadedImage,0,0,canvas.width,canvas.height);
 
   // V5.24: os dois modos recortam primeiro o objeto e preservam sua silhueta.
-  const objectCrop=cropTransparentBounds(ctx,canvas.width,canvas.height,bgMode);
+  const objectCrop=(patternMode==="beads"&&redBeadBounds(ctx,canvas.width,canvas.height))||cropTransparentBounds(ctx,canvas.width,canvas.height,bgMode);
   const aspect=objectCrop.h/objectCrop.w;
   const rows=rowsChoice==="auto"
     ? Math.max(2,Math.min(100,Math.round(cols*aspect)))
@@ -1029,6 +1096,20 @@ async function generateProjectFromImage(){
   // A área amostrada assume a mesma proporção da grade escolhida. Isso impede
   // que uma tabela larga ou alta deforme o objeto fotografado.
   const crop=fitCropToGrid(objectCrop,canvas.width,canvas.height,cols,rows);
+  if(patternMode==="beads"){
+    const detected=convertTwoColorBeads(ctx,crop,cols,rows);
+    project={id:uid(),name,rows,cols,beadSize:3,technique:"Grade reta",
+      palette:detected.palette,grid:detected.grid,
+      createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),
+      source:"image",captureMode:"two-color-beads",detectedColorIds:detected.palette.map(c=>c.id),captureCrop:crop};
+    selectedColor="capture_red";tool="paint";symmetry=false;undoStack=[];redoStack=[];
+    selectedRows.clear();selectedCols.clear();areaSelection=null;updateRowSelectionBar();updateColSelectionBar();
+    zoomLevel=1;setProjectLabel();renderPalette();$("editorPaletteBar")?.classList.remove("paletteCollapsed");
+    $("paletteBtn")?.classList.add("activeTool");updateToolButtons();renderGrid();showView("editorView");
+    setupZoomGestures();applyZoom(1);setLoomMode(false);
+    toast("Miçangas vermelhas e brancas detectadas; confira a borda da peça");
+    return;
+  }
   const backgroundRgb=borderBackgroundColor(ctx,canvas.width,canvas.height);
 
   const cells=[];

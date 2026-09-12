@@ -1,3 +1,11 @@
+# V5.28 — Leitura de miçangas vermelhas e brancas
+
+- Modo padrão específico para miçangas vermelhas e brancas, baseado nas fotos da peça sobre fundo preto e claro.
+- Usa o vermelho para localizar a área tecida; fundo e fios claros externos deixam de definir o recorte.
+- Classifica as contas somente dentro da silhueta estimada por fileira, com branco puro e vermelho da paleta.
+- A repetição 6×6 deixou de ser padrão e permanece marcada como experimental.
+- Áreas sem evidência suficiente são deixadas vazias para correção manual; a leitura ainda deve ser conferida na grade.
+
 # V5.27 — Cores reais
 
 - Nova opção Fixar cores reais, ativada por padrão na captura.
