@@ -89,6 +89,7 @@ let imageQuadAdjusted = false;
 let imageSixPoints = null;
 let imagePointDrag = -1;
 let imagePreviewZoom = 1;
+let imagePanMode = false;
 const IMAGE_PREVIEW_ZOOM_MIN = 1;
 const IMAGE_PREVIEW_ZOOM_MAX = 6;
 
@@ -952,8 +953,11 @@ function setCropMode(mode){
   const stage=$("imageCropStage");
   stage?.classList.toggle("cropActive",mode==="free");
   stage?.classList.toggle("sixPointActive",mode==="six");
+  imagePanMode=false;
+  stage?.classList.remove("panActive");
   $("freeCropBtn")?.classList.toggle("activeTool",mode==="free");
   $("sixPointCropBtn")?.classList.toggle("activeTool",mode==="six");
+  $("imagePanBtn")?.classList.remove("activeTool");
   if(mode==="six"){setCropFromSixPoints();$("clearCropBtn").disabled=false}
   drawFreeCrop();
 }
@@ -973,6 +977,35 @@ function applyImagePreviewZoom(next,focusX=null,focusY=null){
   stage.style.minWidth=stage.style.width;
   updateImageZoomLabel();
   requestAnimationFrame(()=>{syncCropCanvasSize();wrap.scrollLeft=Math.max(0,contentX*imagePreviewZoom-fx);wrap.scrollTop=Math.max(0,contentY*imagePreviewZoom-fy)});
+}
+
+
+function setImagePanMode(){
+  if(!uploadedImage){toast("Escolha uma imagem primeiro");return}
+  imagePanMode=true; imageCropActive=false; imagePointDrag=-1;
+  const stage=$("imageCropStage");
+  stage?.classList.remove("cropActive","sixPointActive");
+  stage?.classList.add("panActive");
+  $("freeCropBtn")?.classList.remove("activeTool");
+  $("sixPointCropBtn")?.classList.remove("activeTool");
+  $("imagePanBtn")?.classList.add("activeTool");
+  toast("Arrastar imagem: deslize com um dedo para mover a foto");
+}
+
+function setupImagePreviewPan(){
+  const wrap=$("imagePreviewWrap"); if(!wrap||wrap.dataset.panReady)return; wrap.dataset.panReady="1";
+  let active=false,startX=0,startY=0,startLeft=0,startTop=0;
+  wrap.addEventListener("pointerdown",e=>{
+    if(!imagePanMode||e.pointerType==="touch"&&e.isPrimary===false)return;
+    active=true; startX=e.clientX; startY=e.clientY; startLeft=wrap.scrollLeft; startTop=wrap.scrollTop;
+    try{wrap.setPointerCapture(e.pointerId)}catch(_){}; e.preventDefault();
+  });
+  wrap.addEventListener("pointermove",e=>{
+    if(!active||!imagePanMode)return;
+    wrap.scrollLeft=startLeft-(e.clientX-startX); wrap.scrollTop=startTop-(e.clientY-startY); e.preventDefault();
+  });
+  const end=e=>{if(!active)return;active=false;try{wrap.releasePointerCapture(e.pointerId)}catch(_){}};
+  wrap.addEventListener("pointerup",end); wrap.addEventListener("pointercancel",end);
 }
 
 function setupImagePreviewPinchZoom(){
@@ -1799,7 +1832,7 @@ function loadImageFromInput(input){
     $("imagePreview").src=url;
     $("imagePreviewWrap").classList.remove("hidden");
     requestAnimationFrame(()=>{syncCropCanvasSize();setupFreeCrop()});
-    setupImagePreviewPinchZoom();toast("Imagem carregada — ajuste os 6 pontos, use o zoom e confira a geometria");
+    setupImagePreviewPinchZoom(); setupImagePreviewPan();toast("Imagem carregada — ajuste os 6 pontos, use o zoom e confira a geometria");
   };
   img.onerror=()=>{
     URL.revokeObjectURL(url);
@@ -1810,6 +1843,7 @@ function loadImageFromInput(input){
 
 $("freeCropBtn").onclick=()=>{if(!uploadedImage){toast("Escolha uma imagem primeiro");return}setCropMode("free");syncCropCanvasSize();setupFreeCrop();toast("Recorte livre: contorne a peça com o dedo")};
 $("sixPointCropBtn").onclick=()=>{if(!uploadedImage){toast("Escolha uma imagem primeiro");return}setCropMode("six");syncCropCanvasSize();setupFreeCrop();toast("Arraste os 6 pontos para acompanhar a geometria do brinco")};
+$("imagePanBtn").onclick=setImagePanMode;
 $("imageZoomOutBtn").onclick=()=>applyImagePreviewZoom(imagePreviewZoom-.25);
 $("imageZoomInBtn").onclick=()=>applyImagePreviewZoom(imagePreviewZoom+.25);
 $("imageZoomResetBtn").onclick=()=>applyImagePreviewZoom(1);

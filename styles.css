@@ -1130,3 +1130,18 @@ body.editor-mode .topbar p{font-size:.72rem;white-space:nowrap;overflow:hidden;t
 .imageCropStage img{width:100%!important;height:auto!important;max-width:none!important}
 .imageAdjustToolbar{position:sticky;bottom:0;z-index:6;background:var(--card);padding:8px;border-radius:10px}
 #imageZoomOutBtn,#imageZoomInBtn,#imageZoomResetBtn{min-width:44px;min-height:44px;font-weight:900}
+
+
+/* V5.34 — captura: arrastar imagem + barras de rolagem reforçadas */
+.imagePreviewWrap{scrollbar-width:auto;scrollbar-color:#a78bfa #eee2ff;min-height:240px}
+.imagePreviewWrap::-webkit-scrollbar{height:20px;width:20px}
+.imagePreviewWrap::-webkit-scrollbar-thumb{background:#a78bfa;border-radius:12px;border:4px solid #f7efff;min-width:44px;min-height:44px}
+.imagePreviewWrap::-webkit-scrollbar-track{background:#eee2ff;border-radius:12px}
+.imageCropStage.panActive #imageCropCanvas{pointer-events:none!important;cursor:grab!important}
+.imagePreviewWrap:has(.imageCropStage.panActive){cursor:grab;touch-action:none}
+.imagePreviewWrap:has(.imageCropStage.panActive):active{cursor:grabbing}
+#imagePanBtn.activeTool{outline:2px solid var(--primary);background:var(--lilac-soft);color:var(--primary-dark)}
+@media(max-width:520px){
+  .imagePreviewWrap{max-height:70vh;min-height:280px}
+  .imagePreviewWrap::-webkit-scrollbar{height:22px;width:22px}
+}

@@ -1,3 +1,13 @@
+# JPmiçangas Designer V5.34
+
+- Adicionado botão **✋ Arrastar imagem** na tela Imagem → Diagrama.
+- O modo Arrastar move a foto ampliada com um dedo sem alterar o recorte nem os 6 pontos.
+- Mantido o botão **⬡ Ajustar 6 pontos** para definir a geometria do brinco.
+- Mantidos zoom `+`, `−`, `100%` e zoom por pinça.
+- Barras de rolagem da imagem ficaram maiores e mais fáceis de usar no celular.
+- Área visível da imagem aumentada em telas pequenas.
+- Cache do PWA atualizado para V5.34.
+
 # JPmiçangas Designer V5.33
 
 - O ajuste geométrico da imagem agora usa **6 pontos arrastáveis**: topo esquerdo/direito, meio direito, base direita/esquerda e meio esquerdo.
