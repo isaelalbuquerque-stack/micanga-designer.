@@ -86,10 +86,11 @@ let imageCropActive = false;
 let imageCropMode = "free";
 let imageQuad = null;
 let imageQuadAdjusted = false;
-let imageCornerDrag = -1;
+let imageSixPoints = null;
+let imagePointDrag = -1;
 let imagePreviewZoom = 1;
 const IMAGE_PREVIEW_ZOOM_MIN = 1;
-const IMAGE_PREVIEW_ZOOM_MAX = 4;
+const IMAGE_PREVIEW_ZOOM_MAX = 6;
 
 
 const READY_TEMPLATES = [
@@ -913,22 +914,36 @@ function lockDetectedColorsToRealPalette(imagePalette){
 
 
 // =========================================================
-// V5.31 — recorte, cantos/perspectiva, zoom e prévia geométrica
+// V5.33 — recorte por 6 pontos + zoom real da fotografia
 // =========================================================
 function defaultImageQuad(){
-  return [{x:.03,y:.03},{x:.97,y:.03},{x:.97,y:.97},{x:.03,y:.97}];
+  return [{x:.20,y:.04},{x:.80,y:.04},{x:.80,y:.96},{x:.20,y:.96}];
+}
+function defaultImageSixPoints(){
+  // topo E/D, meio D, base D/E, meio E — formato ideal para brincos alongados
+  return [{x:.36,y:.03},{x:.64,y:.03},{x:.90,y:.50},{x:.64,y:.97},{x:.36,y:.97},{x:.10,y:.50}];
+}
+function sixPointsToQuad(){
+  const p=imageSixPoints||defaultImageSixPoints();
+  // Os quatro extremos dão a perspectiva; os dois pontos centrais definem a silhueta lateral.
+  return [{...p[0]},{...p[1]},{...p[3]},{...p[4]}];
+}
+function setCropFromSixPoints(){
+  imageCropPoints=(imageSixPoints||defaultImageSixPoints()).map(p=>({...p}));
+  imageQuad=sixPointsToQuad();
+  imageQuadAdjusted=true;
 }
 function resetFreeCrop(){
   imageCropPoints=[]; imageCropHistory=[]; imageCropDrawing=false; imageCropActive=false;
-  imageCropMode="free"; imageQuad=defaultImageQuad(); imageQuadAdjusted=false; imageCornerDrag=-1; imagePreviewZoom=1;
+  imageCropMode="free"; imageSixPoints=defaultImageSixPoints(); imageQuad=sixPointsToQuad(); imageQuadAdjusted=false; imagePointDrag=-1; imagePreviewZoom=1;
   const stage=$("imageCropStage"),canvas=$("imageCropCanvas"),btn=$("freeCropBtn"),guide=$("cropGuideText");
-  stage?.classList.remove("cropActive","cornerActive"); btn?.classList.remove("activeTool"); $("cornerCropBtn")?.classList.remove("activeTool");
-  if(stage) stage.style.width="100%";
+  stage?.classList.remove("cropActive","sixPointActive"); btn?.classList.remove("activeTool"); $("sixPointCropBtn")?.classList.remove("activeTool");
+  if(stage){stage.style.width="100%";stage.style.minWidth="100%"}
   if(canvas){const ctx=canvas.getContext("2d");ctx.clearRect(0,0,canvas.width,canvas.height)}
   if($("undoCropBtn")) $("undoCropBtn").disabled=true;
   if($("clearCropBtn")) $("clearCropBtn").disabled=true;
   updateImageZoomLabel();
-  if(guide){guide.classList.remove("ready");guide.textContent="Ajuste os cantos ou contorne somente a peça. Depois confira a Prévia da geometria."}
+  if(guide){guide.classList.remove("ready");guide.textContent="Ajuste os 6 pontos da geometria ou contorne somente a peça. Depois confira a Prévia da geometria."}
 }
 
 function setCropMode(mode){
@@ -936,17 +951,36 @@ function setCropMode(mode){
   imageCropActive=mode==="free";
   const stage=$("imageCropStage");
   stage?.classList.toggle("cropActive",mode==="free");
-  stage?.classList.toggle("cornerActive",mode==="corners");
+  stage?.classList.toggle("sixPointActive",mode==="six");
   $("freeCropBtn")?.classList.toggle("activeTool",mode==="free");
-  $("cornerCropBtn")?.classList.toggle("activeTool",mode==="corners");
+  $("sixPointCropBtn")?.classList.toggle("activeTool",mode==="six");
+  if(mode==="six"){setCropFromSixPoints();$("clearCropBtn").disabled=false}
   drawFreeCrop();
 }
 
 function updateImageZoomLabel(){if($("imageZoomLabel")) $("imageZoomLabel").textContent=Math.round(imagePreviewZoom*100)+"%"}
-function applyImagePreviewZoom(next){
-  imagePreviewZoom=Math.max(IMAGE_PREVIEW_ZOOM_MIN,Math.min(IMAGE_PREVIEW_ZOOM_MAX,next));
-  const stage=$("imageCropStage");if(stage)stage.style.width=(imagePreviewZoom*100)+"%";
-  updateImageZoomLabel();requestAnimationFrame(syncCropCanvasSize);
+function applyImagePreviewZoom(next,focusX=null,focusY=null){
+  const wrap=$("imagePreviewWrap"),stage=$("imageCropStage");if(!wrap||!stage)return;
+  const old=Math.max(.01,imagePreviewZoom);
+  const nextZoom=Math.max(IMAGE_PREVIEW_ZOOM_MIN,Math.min(IMAGE_PREVIEW_ZOOM_MAX,next));
+  const viewRect=wrap.getBoundingClientRect();
+  const fx=focusX==null?wrap.clientWidth/2:Math.max(0,Math.min(wrap.clientWidth,focusX-viewRect.left));
+  const fy=focusY==null?wrap.clientHeight/2:Math.max(0,Math.min(wrap.clientHeight,focusY-viewRect.top));
+  const contentX=(wrap.scrollLeft+fx)/old, contentY=(wrap.scrollTop+fy)/old;
+  imagePreviewZoom=nextZoom;
+  const base=Math.max(1,wrap.clientWidth-16);
+  stage.style.width=Math.round(base*imagePreviewZoom)+"px";
+  stage.style.minWidth=stage.style.width;
+  updateImageZoomLabel();
+  requestAnimationFrame(()=>{syncCropCanvasSize();wrap.scrollLeft=Math.max(0,contentX*imagePreviewZoom-fx);wrap.scrollTop=Math.max(0,contentY*imagePreviewZoom-fy)});
+}
+
+function setupImagePreviewPinchZoom(){
+  const wrap=$("imagePreviewWrap");if(!wrap||wrap.dataset.pinchReady)return;wrap.dataset.pinchReady="1";
+  let startDist=0,startZoom=1,midX=0,midY=0;
+  wrap.addEventListener("touchstart",e=>{if(e.touches.length!==2)return;const a=e.touches[0],b=e.touches[1];startDist=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);startZoom=imagePreviewZoom;midX=(a.clientX+b.clientX)/2;midY=(a.clientY+b.clientY)/2},{passive:true});
+  wrap.addEventListener("touchmove",e=>{if(e.touches.length!==2||!startDist)return;e.preventDefault();const a=e.touches[0],b=e.touches[1];const d=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);applyImagePreviewZoom(startZoom*(d/startDist),midX,midY)},{passive:false});
+  wrap.addEventListener("touchend",e=>{if(e.touches.length<2)startDist=0},{passive:true});
 }
 
 function syncCropCanvasSize(){
@@ -957,11 +991,11 @@ function syncCropCanvasSize(){
   drawFreeCrop();
 }
 
-function drawQuadHandles(ctx,canvas){
-  const q=imageQuad||defaultImageQuad();
+function drawSixPointHandles(ctx,canvas){
+  const q=imageSixPoints||defaultImageSixPoints();
   ctx.save();ctx.lineWidth=2.5;ctx.strokeStyle="#f59e0b";ctx.fillStyle="rgba(245,158,11,.12)";
-  ctx.beginPath();ctx.moveTo(q[0].x*canvas.width,q[0].y*canvas.height);for(let i=1;i<4;i++)ctx.lineTo(q[i].x*canvas.width,q[i].y*canvas.height);ctx.closePath();ctx.fill();ctx.stroke();
-  q.forEach((p,i)=>{ctx.beginPath();ctx.arc(p.x*canvas.width,p.y*canvas.height,10,0,Math.PI*2);ctx.fillStyle="#fff";ctx.fill();ctx.lineWidth=4;ctx.strokeStyle="#f59e0b";ctx.stroke();ctx.fillStyle="#6b3b00";ctx.font="bold 11px sans-serif";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(String(i+1),p.x*canvas.width,p.y*canvas.height)});
+  ctx.beginPath();ctx.moveTo(q[0].x*canvas.width,q[0].y*canvas.height);for(let i=1;i<6;i++)ctx.lineTo(q[i].x*canvas.width,q[i].y*canvas.height);ctx.closePath();ctx.fill();ctx.stroke();
+  q.forEach((p,i)=>{ctx.beginPath();ctx.arc(p.x*canvas.width,p.y*canvas.height,12,0,Math.PI*2);ctx.fillStyle="#fff";ctx.fill();ctx.lineWidth=4;ctx.strokeStyle="#f59e0b";ctx.stroke();ctx.fillStyle="#6b3b00";ctx.font="bold 12px sans-serif";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(String(i+1),p.x*canvas.width,p.y*canvas.height)});
   ctx.restore();
 }
 
@@ -974,27 +1008,27 @@ function drawFreeCrop(){
     imageCropPoints.slice(1).forEach(p=>ctx.lineTo(p.x*canvas.width,p.y*canvas.height));
     if(!imageCropDrawing&&imageCropPoints.length>2){ctx.closePath();ctx.fill()}ctx.stroke();ctx.restore();
   }
-  if(imageCropMode==="corners"||imageQuadAdjusted)drawQuadHandles(ctx,canvas);
+  if(imageCropMode==="six")drawSixPointHandles(ctx,canvas);
 }
 
 function cropPointFromEvent(e){
   const canvas=$("imageCropCanvas"),rect=canvas.getBoundingClientRect();
   return {x:Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width)),y:Math.max(0,Math.min(1,(e.clientY-rect.top)/rect.height))};
 }
-function nearestQuadCorner(p){
-  const q=imageQuad||defaultImageQuad();let best=-1,d=.08;
+function nearestSixPoint(p){
+  const q=imageSixPoints||defaultImageSixPoints();let best=-1,d=.10/Math.max(1,Math.sqrt(imagePreviewZoom));
   q.forEach((c,i)=>{const n=Math.hypot(c.x-p.x,c.y-p.y);if(n<d){d=n;best=i}});return best;
 }
-function rotateQuad(degrees){
-  if(!imageQuad)imageQuad=defaultImageQuad();const a=degrees*Math.PI/180;
-  const cx=imageQuad.reduce((n,p)=>n+p.x,0)/4,cy=imageQuad.reduce((n,p)=>n+p.y,0)/4;
-  imageQuad=imageQuad.map(p=>{const x=p.x-cx,y=p.y-cy;return{x:Math.max(0,Math.min(1,cx+x*Math.cos(a)-y*Math.sin(a))),y:Math.max(0,Math.min(1,cy+x*Math.sin(a)+y*Math.cos(a)))}});
-  imageQuadAdjusted=true;drawFreeCrop();
+function rotateSixPoints(degrees){
+  if(!imageSixPoints)imageSixPoints=defaultImageSixPoints();const a=degrees*Math.PI/180;
+  const cx=imageSixPoints.reduce((n,p)=>n+p.x,0)/6,cy=imageSixPoints.reduce((n,p)=>n+p.y,0)/6;
+  imageSixPoints=imageSixPoints.map(p=>{const x=p.x-cx,y=p.y-cy;return{x:Math.max(0,Math.min(1,cx+x*Math.cos(a)-y*Math.sin(a))),y:Math.max(0,Math.min(1,cy+x*Math.sin(a)+y*Math.cos(a)))}});
+  setCropFromSixPoints();drawFreeCrop();
 }
-function autoStraightenQuad(){
-  if(!imageQuad)imageQuad=defaultImageQuad();
-  const top=Math.atan2(imageQuad[1].y-imageQuad[0].y,imageQuad[1].x-imageQuad[0].x)*180/Math.PI;
-  rotateQuad(-top);toast("Inclinação superior corrigida");
+function autoStraightenSixPoints(){
+  if(!imageSixPoints)imageSixPoints=defaultImageSixPoints();
+  const top=Math.atan2(imageSixPoints[1].y-imageSixPoints[0].y,imageSixPoints[1].x-imageSixPoints[0].x)*180/Math.PI;
+  rotateSixPoints(-top);toast("Inclinação superior corrigida");
 }
 
 function finishFreeCrop(){
@@ -1002,18 +1036,29 @@ function finishFreeCrop(){
   if(imageCropPoints.length<3){imageCropPoints=[];drawFreeCrop();return}
   const reduced=[imageCropPoints[0]];
   for(const p of imageCropPoints.slice(1)){const q=reduced.at(-1);if(Math.hypot(p.x-q.x,p.y-q.y)>.006)reduced.push(p)}
-  imageCropPoints=reduced;drawFreeCrop();
+  imageCropPoints=reduced;imageQuadAdjusted=false;drawFreeCrop();
   if($("undoCropBtn")) $("undoCropBtn").disabled=false;
   if($("clearCropBtn")) $("clearCropBtn").disabled=false;
-  const guide=$("cropGuideText");if(guide){guide.classList.add("ready");guide.textContent="Recorte definido. Agora use os cantos/perspectiva e confira a Prévia da geometria."}
+  const guide=$("cropGuideText");if(guide){guide.classList.add("ready");guide.textContent="Recorte definido. Confira a Prévia da geometria."}
   toast("Recorte livre definido");
 }
 
 function setupFreeCrop(){
   const canvas=$("imageCropCanvas"); if(!canvas||canvas.dataset.ready)return; canvas.dataset.ready="1";
-  const begin=e=>{const p=cropPointFromEvent(e);if(imageCropMode==="corners"){const i=nearestQuadCorner(p);if(i<0)return;e.preventDefault();imageCornerDrag=i;try{canvas.setPointerCapture(e.pointerId)}catch(_){};return}if(!imageCropActive)return;e.preventDefault();syncCropCanvasSize();imageCropHistory.push(imageCropPoints.slice());imageCropPoints=[p];imageCropDrawing=true;try{canvas.setPointerCapture(e.pointerId)}catch(_){}};
-  const move=e=>{const p=cropPointFromEvent(e);if(imageCropMode==="corners"&&imageCornerDrag>=0){e.preventDefault();imageQuad[imageCornerDrag]=p;imageQuadAdjusted=true;drawFreeCrop();return}if(!imageCropActive||!imageCropDrawing)return;e.preventDefault();imageCropPoints.push(p);drawFreeCrop()};
-  const end=e=>{if(imageCropMode==="corners"&&imageCornerDrag>=0){imageCornerDrag=-1;try{canvas.releasePointerCapture(e.pointerId)}catch(_){};drawFreeCrop();return}if(!imageCropDrawing)return;e.preventDefault();try{canvas.releasePointerCapture(e.pointerId)}catch(_){}finishFreeCrop()};
+  const begin=e=>{
+    const p=cropPointFromEvent(e);
+    if(imageCropMode==="six"){const i=nearestSixPoint(p);if(i<0)return;e.preventDefault();imagePointDrag=i;try{canvas.setPointerCapture(e.pointerId)}catch(_){};return}
+    if(!imageCropActive)return;e.preventDefault();syncCropCanvasSize();imageCropHistory.push(imageCropPoints.slice());imageCropPoints=[p];imageCropDrawing=true;try{canvas.setPointerCapture(e.pointerId)}catch(_){}
+  };
+  const move=e=>{
+    const p=cropPointFromEvent(e);
+    if(imageCropMode==="six"&&imagePointDrag>=0){e.preventDefault();imageSixPoints[imagePointDrag]=p;setCropFromSixPoints();drawFreeCrop();return}
+    if(!imageCropActive||!imageCropDrawing)return;e.preventDefault();imageCropPoints.push(p);drawFreeCrop()
+  };
+  const end=e=>{
+    if(imageCropMode==="six"&&imagePointDrag>=0){imagePointDrag=-1;try{canvas.releasePointerCapture(e.pointerId)}catch(_){};drawFreeCrop();return}
+    if(!imageCropDrawing)return;e.preventDefault();try{canvas.releasePointerCapture(e.pointerId)}catch(_){}finishFreeCrop()
+  };
   canvas.addEventListener("pointerdown",begin);canvas.addEventListener("pointermove",move);canvas.addEventListener("pointerup",end);canvas.addEventListener("pointercancel",end);
 }
 
@@ -1336,7 +1381,7 @@ async function generateProjectFromImage(){
     project={id:uid(),name,rows,cols,beadSize:3,technique:"Grade reta",
       palette:detected.palette,grid:detected.grid,
       createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),
-      source:"image",captureMode:"selected-area-v532",detectedColorIds:detected.palette.map(c=>c.id),captureCrop:crop,manualCrop:imageCropPoints.map(p=>({...p})),cornerQuad:imageQuadAdjusted?imageQuad.map(p=>({...p})):null};
+      source:"image",captureMode:"selected-area-v533",detectedColorIds:detected.palette.map(c=>c.id),captureCrop:crop,manualCrop:imageCropPoints.map(p=>({...p})),sixPointGeometry:imageSixPoints?.map(p=>({...p}))||null,cornerQuad:imageQuadAdjusted?imageQuad.map(p=>({...p})):null};
     selectedColor="capture_red";tool="paint";symmetry=false;undoStack=[];redoStack=[];
     selectedRows.clear();selectedCols.clear();areaSelection=null;updateRowSelectionBar();updateColSelectionBar();
     zoomLevel=1;setProjectLabel();renderPalette();$("editorPaletteBar")?.classList.remove("paletteCollapsed");
@@ -1754,7 +1799,7 @@ function loadImageFromInput(input){
     $("imagePreview").src=url;
     $("imagePreviewWrap").classList.remove("hidden");
     requestAnimationFrame(()=>{syncCropCanvasSize();setupFreeCrop()});
-    toast("Imagem carregada — ajuste cantos, zoom e recorte");
+    setupImagePreviewPinchZoom();toast("Imagem carregada — ajuste os 6 pontos, use o zoom e confira a geometria");
   };
   img.onerror=()=>{
     URL.revokeObjectURL(url);
@@ -1764,14 +1809,14 @@ function loadImageFromInput(input){
 }
 
 $("freeCropBtn").onclick=()=>{if(!uploadedImage){toast("Escolha uma imagem primeiro");return}setCropMode("free");syncCropCanvasSize();setupFreeCrop();toast("Recorte livre: contorne a peça com o dedo")};
-$("cornerCropBtn").onclick=()=>{if(!uploadedImage){toast("Escolha uma imagem primeiro");return}setCropMode("corners");syncCropCanvasSize();setupFreeCrop();toast("Arraste os 4 cantos para enquadrar a peça")};
+$("sixPointCropBtn").onclick=()=>{if(!uploadedImage){toast("Escolha uma imagem primeiro");return}setCropMode("six");syncCropCanvasSize();setupFreeCrop();toast("Arraste os 6 pontos para acompanhar a geometria do brinco")};
 $("imageZoomOutBtn").onclick=()=>applyImagePreviewZoom(imagePreviewZoom-.25);
 $("imageZoomInBtn").onclick=()=>applyImagePreviewZoom(imagePreviewZoom+.25);
 $("imageZoomResetBtn").onclick=()=>applyImagePreviewZoom(1);
-$("rotateImageLeftBtn").onclick=()=>rotateQuad(-1);
-$("rotateImageRightBtn").onclick=()=>rotateQuad(1);
-$("straightenImageBtn").onclick=autoStraightenQuad;
-$("resetCornersBtn").onclick=()=>{imageQuad=defaultImageQuad();imageQuadAdjusted=false;drawFreeCrop();toast("Cantos restaurados")};
+$("rotateImageLeftBtn").onclick=()=>rotateSixPoints(-1);
+$("rotateImageRightBtn").onclick=()=>rotateSixPoints(1);
+$("straightenImageBtn").onclick=autoStraightenSixPoints;
+$("resetSixPointsBtn").onclick=()=>{imageSixPoints=defaultImageSixPoints();setCropFromSixPoints();drawFreeCrop();toast("6 pontos restaurados")};
 $("previewGeometryBtn").onclick=showGeometryPreview;
 $("closeGeometryPreviewBtn").onclick=closeGeometryPreview;
 $("backGeometryPreviewBtn").onclick=closeGeometryPreview;
@@ -1780,7 +1825,7 @@ $("undoCropBtn").onclick=()=>{
   if(!imageCropHistory.length){imageCropPoints=[]}else imageCropPoints=imageCropHistory.pop();
   drawFreeCrop();$("undoCropBtn").disabled=!imageCropHistory.length&&imageCropPoints.length===0;$("clearCropBtn").disabled=imageCropPoints.length===0;
 };
-$("clearCropBtn").onclick=()=>{imageCropHistory.push(imageCropPoints.slice());imageCropPoints=[];drawFreeCrop();$("clearCropBtn").disabled=true;const guide=$("cropGuideText");if(guide){guide.classList.remove("ready");guide.textContent="Contorne somente a peça com o dedo. O algoritmo usará esse contorno para definir a geometria do desenho."}};
+$("clearCropBtn").onclick=()=>{imageCropHistory.push(imageCropPoints.slice());imageCropPoints=[];drawFreeCrop();$("clearCropBtn").disabled=true;const guide=$("cropGuideText");if(guide){guide.classList.remove("ready");guide.textContent="Ajuste os 6 pontos ou contorne somente a peça. O algoritmo usará apenas essa área."}};
 window.addEventListener("resize",()=>{if(uploadedImage)requestAnimationFrame(syncCropCanvasSize)});
 
 $("cameraImageBtn").onclick=()=>{

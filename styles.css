@@ -1102,10 +1102,10 @@ body.editor-mode .topbar p{font-size:.72rem;white-space:nowrap;overflow:hidden;t
 .imageCropStage{position:relative;display:block;width:100%;max-width:none;touch-action:none;user-select:none;transform-origin:top left}
 .imageCropStage img{display:block;width:100%;height:auto;max-width:none;max-height:none}
 #imageCropCanvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;z-index:3;cursor:crosshair}
-.imageCropStage.cornerActive #imageCropCanvas{pointer-events:auto;cursor:grab}
+.imageCropStage.sixPointActive #imageCropCanvas{pointer-events:auto;cursor:grab}
 .imageCropStage.cropActive #imageCropCanvas{pointer-events:auto;cursor:crosshair}
-.imageCropStage:not(.cropActive):not(.cornerActive) #imageCropCanvas{pointer-events:none}
-.imageCropStage.cornerActive{outline:2px solid #f59e0b;border-radius:12px}
+.imageCropStage:not(.cropActive):not(.sixPointActive) #imageCropCanvas{pointer-events:none}
+.imageCropStage.sixPointActive{outline:2px solid #f59e0b;border-radius:12px}
 .cropToolbar,.imageAdjustToolbar{display:flex;gap:7px;flex-wrap:wrap;width:100%;padding:9px 2px 0;position:sticky;left:0}
 .cropToolbar button,.imageAdjustToolbar button{padding:8px 10px;font-size:.78rem}
 .imageAdjustToolbar strong{min-width:52px;display:grid;place-items:center;color:var(--primary-dark)}
@@ -1123,3 +1123,10 @@ body.editor-mode .topbar p{font-size:.72rem;white-space:nowrap;overflow:hidden;t
   .geometryPreviewModal{padding:6px}.geometryPreviewPanel{border-radius:14px;padding:9px}
   .geometryPreviewViewport{max-height:68vh}
 }
+
+/* V5.33 — zoom real na foto + 6 pontos */
+.imagePreviewWrap{overflow:auto!important;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;align-items:start!important;justify-items:start!important}
+.imageCropStage{flex:0 0 auto;max-width:none!important}
+.imageCropStage img{width:100%!important;height:auto!important;max-width:none!important}
+.imageAdjustToolbar{position:sticky;bottom:0;z-index:6;background:var(--card);padding:8px;border-radius:10px}
+#imageZoomOutBtn,#imageZoomInBtn,#imageZoomResetBtn{min-width:44px;min-height:44px;font-weight:900}

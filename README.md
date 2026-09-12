@@ -1,3 +1,14 @@
+# JPmiçangas Designer V5.33
+
+- O ajuste geométrico da imagem agora usa **6 pontos arrastáveis**: topo esquerdo/direito, meio direito, base direita/esquerda e meio esquerdo.
+- Os 6 pontos definem a silhueta do brinco e a área usada pelo algoritmo.
+- O recorte livre continua disponível como alternativa.
+- Zoom da imagem refeito: botões `+`, `−` e `100%` agora ampliam fisicamente a foto dentro de uma área rolável.
+- Zoom máximo aumentado para **600%**.
+- Adicionado **zoom por pinça com dois dedos**, mantendo o ponto focal da ampliação.
+- Rotação fina e Endireitar agora atuam sobre a geometria de 6 pontos.
+- Cache do PWA atualizado para V5.33.
+
 # JPmiçangas Designer V5.32
 
 - Removida a opção **Reconstruir padrão repetido** da captura por imagem.
