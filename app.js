@@ -742,7 +742,14 @@ function borderBackgroundColor(ctx,w,h){
   return [0,1,2].map(ch=>{const values=samples.map(s=>s[ch]).sort((a,b)=>a-b);return values[Math.floor(values.length/2)]});
 }
 
-function cellColorFromRegion(ctx, x0, y0, x1, y1, bgMode, faithful=false){
+function matchesSelectedBackground(r,g,b,mode,borderRgb){
+  const borderLight=(borderRgb[0]+borderRgb[1]+borderRgb[2])/3;
+  if(mode==="light") return borderLight>220&&isBackgroundPixel(r,g,b,"light");
+  if(mode==="dark") return borderLight<35&&isBackgroundPixel(r,g,b,"dark");
+  return false;
+}
+
+function cellColorFromRegion(ctx, x0, y0, x1, y1, bgMode, faithful=false, backgroundRgb=null){
   const w=Math.max(1,x1-x0), h=Math.max(1,y1-y0);
   const data=ctx.getImageData(x0,y0,w,h).data;
 
@@ -764,7 +771,10 @@ function cellColorFromRegion(ctx, x0, y0, x1, y1, bgMode, faithful=false){
       const centerWeight=Math.max(.25,1-Math.sqrt(nx*nx+ny*ny)*1.25);
       totalWeight+=centerWeight;
       if(a<70) continue;
-      const isBg=!faithful && isBackgroundPixel(r,g,b,bgMode);
+      // O fundo estimado pelas bordas é descartado nos dois modos. Assim o modo
+      // fiel preserva a silhueta do brinco em vez de preencher um retângulo.
+      const matchesBorder=backgroundRgb && colorDistance([r,g,b],backgroundRgb)<42*42;
+      const isBg=matchesSelectedBackground(r,g,b,bgMode,backgroundRgb||[255,255,255])||matchesBorder;
       if(isBg) continue;
       validWeight+=centerWeight;
 
@@ -779,21 +789,12 @@ function cellColorFromRegion(ctx, x0, y0, x1, y1, bgMode, faithful=false){
     }
   }
 
-  if(!buckets.size){
-    // No modo fiel, uma célula nunca deve desaparecer. Usa o pixel central como fallback.
-    if(faithful){
-      const cx=Math.max(0,Math.min(w-1,Math.floor(w/2)));
-      const cy=Math.max(0,Math.min(h-1,Math.floor(h/2)));
-      const i=(cy*w+cx)*4;
-      return {coverage:1,rgb:[data[i],data[i+1],data[i+2]]};
-    }
-    return {coverage:0,rgb:null};
-  }
+  if(!buckets.size) return {coverage:0,rgb:null};
 
   let best=null;
   for(const item of buckets.values()) if(!best || item.w>best.w) best=item;
   return {
-    coverage:faithful ? 1 : validWeight/Math.max(.001,totalWeight),
+    coverage:validWeight/Math.max(.001,totalWeight),
     rgb:[Math.round(best.r/best.w),Math.round(best.g/best.w),Math.round(best.b/best.w)]
   };
 }
@@ -867,14 +868,14 @@ function nearestPaletteId(r,g,b,palette){
 function cropTransparentBounds(ctx,w,h,bgMode){
   const data=ctx.getImageData(0,0,w,h).data;
   const border=borderBackgroundColor(ctx,w,h);
-  const adaptiveLimit=bgMode==="none" ? 34*34 : 24*24;
+  const adaptiveLimit=bgMode==="none" ? 46*46 : 40*40;
   let minX=w,minY=h,maxX=-1,maxY=-1;
   for(let y=0;y<h;y++){
     for(let x=0;x<w;x++){
       const i=(y*w+x)*4;
       const r=data[i],g=data[i+1],b=data[i+2],a=data[i+3];
       const differsFromBorder=colorDistance([r,g,b],border)>adaptiveLimit;
-      if(a>90 && !isBackgroundPixel(r,g,b,bgMode) && differsFromBorder){
+      if(a>90 && !matchesSelectedBackground(r,g,b,bgMode,border) && differsFromBorder){
         if(x<minX)minX=x;if(x>maxX)maxX=x;if(y<minY)minY=y;if(y>maxY)maxY=y;
       }
     }
@@ -884,6 +885,36 @@ function cropTransparentBounds(ctx,w,h,bgMode){
   minX=Math.max(0,minX-pad);minY=Math.max(0,minY-pad);
   maxX=Math.min(w-1,maxX+pad);maxY=Math.min(h-1,maxY+pad);
   return {x:minX,y:minY,w:maxX-minX+1,h:maxY-minY+1};
+}
+
+function fitCropToGrid(crop,canvasW,canvasH,cols,rows){
+  const targetAspect=cols/rows;
+  let width=crop.w,height=crop.h;
+  if(width/height<targetAspect) width=height*targetAspect;
+  else height=width/targetAspect;
+  if(width>canvasW){width=canvasW;height=width/targetAspect}
+  if(height>canvasH){height=canvasH;width=height*targetAspect}
+  const centerX=crop.x+crop.w/2,centerY=crop.y+crop.h/2;
+  const x=Math.max(0,Math.min(canvasW-width,centerX-width/2));
+  const y=Math.max(0,Math.min(canvasH-height,centerY-height/2));
+  const ix=Math.max(0,Math.floor(x)),iy=Math.max(0,Math.floor(y));
+  return {x:ix,y:iy,w:Math.max(1,Math.min(canvasW-ix,Math.floor(width))),h:Math.max(1,Math.min(canvasH-iy,Math.floor(height)))};
+}
+
+function buildCleanCaptureMask(cells,threshold){
+  const rows=cells.length,cols=cells[0]?.length||0;
+  const original=cells.map(row=>row.map(info=>!!info.rgb&&info.coverage>=threshold));
+  const mask=original.map(row=>row.slice());
+  // Remove pontos isolados, geralmente textura do tecido ou reflexos.
+  for(let y=0;y<rows;y++) for(let x=0;x<cols;x++) if(mask[y][x]){
+    let neighbors=0;
+    for(let dy=-1;dy<=1;dy++) for(let dx=-1;dx<=1;dx++){
+      if(!dx&&!dy)continue;
+      if(original[y+dy]?.[x+dx])neighbors++;
+    }
+    if(neighbors<2) mask[y][x]=false;
+  }
+  return mask;
 }
 
 async function generateProjectFromImage(){
@@ -911,16 +942,18 @@ async function generateProjectFromImage(){
   ctx.imageSmoothingQuality="high";
   ctx.drawImage(uploadedImage,0,0,canvas.width,canvas.height);
 
-  // V5.23: os dois modos recortam primeiro o objeto. Fidelidade máxima continua
-  // preenchendo todas as células, mas não transforma margens da foto em miçangas.
-  const crop=cropTransparentBounds(ctx,canvas.width,canvas.height,bgMode);
-  const aspect=crop.h/crop.w;
+  // V5.24: os dois modos recortam primeiro o objeto e preservam sua silhueta.
+  const objectCrop=cropTransparentBounds(ctx,canvas.width,canvas.height,bgMode);
+  const aspect=objectCrop.h/objectCrop.w;
   const rows=rowsChoice==="auto"
     ? Math.max(2,Math.min(100,Math.round(cols*aspect)))
     : Math.max(2,Math.min(100,Number(rowsChoice)||Math.round(cols*aspect)));
+  // A área amostrada assume a mesma proporção da grade escolhida. Isso impede
+  // que uma tabela larga ou alta deforme o objeto fotografado.
+  const crop=fitCropToGrid(objectCrop,canvas.width,canvas.height,cols,rows);
+  const backgroundRgb=borderBackgroundColor(ctx,canvas.width,canvas.height);
 
   const cells=[];
-  const useful=[];
   for(let y=0;y<rows;y++){
     const row=[];
     for(let x=0;x<cols;x++){
@@ -928,12 +961,19 @@ async function generateProjectFromImage(){
       const x1=Math.max(x0+1,Math.floor(crop.x+((x+1)/cols)*crop.w));
       const y0=Math.floor(crop.y+(y/rows)*crop.h);
       const y1=Math.max(y0+1,Math.floor(crop.y+((y+1)/rows)*crop.h));
-      const info=cellColorFromRegion(ctx,x0,y0,x1,y1,bgMode,faithful);
+      const info=cellColorFromRegion(ctx,x0,y0,x1,y1,bgMode,faithful,backgroundRgb);
       row.push(info);
-      if(info.rgb && (faithful || info.coverage>=sensitivity)) useful.push(info);
     }
     cells.push(row);
   }
+
+
+  // O modo fiel exige mais conteúdo real por célula: isso elimina fios finos e
+  // o tecido, mas mantém as contas vermelhas e brancas da peça.
+  const captureThreshold=faithful?Math.max(.16,sensitivity):sensitivity;
+  const captureMask=buildCleanCaptureMask(cells,captureThreshold);
+  const useful=[];
+  cells.forEach((row,y)=>row.forEach((info,x)=>{if(captureMask[y][x])useful.push(info)}));
 
   const imgPalette=kmeansPalette(useful,maxColors);
   if(!imgPalette.length){
@@ -945,8 +985,7 @@ async function generateProjectFromImage(){
   for(let y=0;y<rows;y++){
     for(let x=0;x<cols;x++){
       const info=cells[y][x];
-      if(!info.rgb) continue;
-      if(!faithful && info.coverage<sensitivity) continue;
+      if(!captureMask[y][x]||!info.rgb) continue;
       grid[y][x]=nearestPaletteId(...info.rgb,imgPalette);
     }
   }
@@ -958,7 +997,8 @@ async function generateProjectFromImage(){
     source:"image",captureMode:fidelityMode,
     detectedColorIds:imgPalette.map(c=>c.id),
     sourceImage:$("imagePreview")?.src||null,
-    captureCrop:crop
+    captureCrop:crop,objectCrop,
+    captureTable:{rows,cols}
   };
 
   selectedColor=project.palette[0].id;

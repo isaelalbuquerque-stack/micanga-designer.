@@ -1,3 +1,15 @@
+# V5.24 — Captura orientada pela tabela
+
+- Adicionada a opção de tabela com 31 colunas em Foto → Diagrama.
+- O tratamento passa a usar exatamente as linhas e colunas selecionadas como referência.
+- A fotografia é encaixada na proporção da tabela sem esticar ou deformar o desenho.
+- No modo automático, as linhas continuam sendo calculadas pela proporção do objeto recortado.
+- A remoção de fundo compara cada região com a cor predominante das bordas, reduzindo sombras e ruídos próximos ao fundo.
+- O tecido/fundo deixa de entrar na paleta de cores mesmo em Fidelidade máxima.
+- Pontos isolados e fios finos são filtrados antes da criação da grade.
+- A área externa à silhueta da peça permanece vazia, sem formar um retângulo de miçangas cinzas.
+- Mantida a coluna vertical com todas as cores detectadas para correção manual.
+
 # V5.23 — Captura fiel + coluna de correção de cores
 
 - A conversão agora recorta automaticamente o objeto também no modo Fidelidade máxima, evitando transformar margens e fundo da fotografia em miçangas.

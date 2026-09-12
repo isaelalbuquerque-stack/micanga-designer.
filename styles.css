@@ -107,6 +107,7 @@ input,select{width:100%;border:1px solid var(--border);background:#fff;padding:1
 .imagePreviewWrap{margin:12px 0;border:1px solid var(--border);border-radius:16px;overflow:hidden;background:#f3ece7;display:grid;place-items:center;min-height:180px}
 .imagePreviewWrap img{max-width:100%;max-height:360px;display:block}
 .imagePreviewWrap.hidden{display:none}
+.tableGuideText{margin:2px 0 12px;padding:8px 10px;border-radius:10px;background:var(--lilac-soft2);color:var(--primary-dark);font-weight:700}
 
 
 .backgroundSettings{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
