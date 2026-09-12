@@ -386,15 +386,28 @@
         </div>
         <div class="geometryPreviewEditBar">
           <div>
-            <strong>Corrigir prévia</strong>
-            <small>Escolha uma cor e toque nas miçangas faltantes ou incorretas.</small>
+            <strong>Conferência da grade</strong>
+            <small>Veja a peça de frente, confira linhas/colunas e corrija célula por célula.</small>
           </div>
           <button id="geometryPreviewAddColorBtn" type="button" class="secondary">＋ Cor</button>
           <input id="geometryPreviewColorInput" type="color" value="#d8342a" class="hidden" />
         </div>
+        <div class="geometryPreviewGridSetup" aria-label="Conferir linhas e colunas">
+          <label>Linhas<input id="geometryPreviewRowsInput" type="number" min="2" max="100" inputmode="numeric" /></label>
+          <label>Colunas<input id="geometryPreviewColsInput" type="number" min="2" max="100" inputmode="numeric" /></label>
+          <button id="geometryPreviewRebuildBtn" type="button" class="secondary">↻ Atualizar grade</button>
+        </div>
+        <div class="geometryPreviewViewBar" aria-label="Zoom e movimentação da prévia">
+          <button id="geometryPreviewEditBtn" type="button" class="secondary activeTool">✏️ Editar</button>
+          <button id="geometryPreviewPanBtn" type="button" class="secondary">✋ Mover</button>
+          <button id="geometryPreviewZoomOutBtn" type="button" class="secondary">−</button>
+          <strong id="geometryPreviewZoomLabel">100%</strong>
+          <button id="geometryPreviewZoomInBtn" type="button" class="secondary">＋</button>
+          <button id="geometryPreviewFitBtn" type="button" class="secondary">▣ Ver inteira</button>
+        </div>
         <div id="geometryPreviewPalette" class="geometryPreviewPalette" aria-label="Cores para corrigir a prévia"></div>
-        <div class="geometryPreviewViewport"><canvas id="geometryPreviewCanvas"></canvas></div>
-        <p class="helperText">Toque numa célula para completar uma miçanga, trocar a cor ou apagar um ponto detectado incorretamente.</p>
+        <div id="geometryPreviewViewport" class="geometryPreviewViewport"><canvas id="geometryPreviewCanvas"></canvas></div>
+        <p class="helperText">As letras no topo e os números na lateral funcionam como a tabela manual. Em ✏️ Editar você insere, troca ou remove miçangas; em ✋ Mover arraste a grade nos dois eixos.</p>
         <div class="rowBtns">
           <button id="backGeometryPreviewBtn" type="button" class="secondary">← Voltar e corrigir</button>
           <button id="confirmGeometryBtn" type="button" class="primary">✓ Gerar diagrama</button>

@@ -1,3 +1,13 @@
+# JPmiçangas Designer V5.36
+
+- Prévia da geometria refeita como **tabela de conferência**, com letras nas colunas e números nas linhas.
+- A foto é mostrada somente dentro da área selecionada, em **vista frontal e sem esticar**.
+- Controles de **zoom + / −** e botão **Ver inteira** na própria prévia.
+- Novo modo **✋ Mover** para arrastar a prévia nos eixos horizontal e vertical.
+- Campos **Linhas** e **Colunas** permitem conferir/corrigir a dimensão antes de gerar; Atualizar grade refaz a leitura com a dimensão escolhida.
+- Mantidas as ferramentas para **inserir, trocar cor e remover miçangas** célula por célula.
+- Barras de rolagem da prévia foram ampliadas para uso no celular.
+
 # JPmiçangas Designer V5.35
 
 - Prévia da geometria agora é **editável** antes de gerar o diagrama.

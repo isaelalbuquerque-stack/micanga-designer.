@@ -1179,3 +1179,28 @@ body.editor-mode .topbar p{font-size:.72rem;white-space:nowrap;overflow:hidden;t
   #imagePointMagnifierCanvas{width:130px;height:130px}
   .geometryPreviewEditBar{align-items:flex-start}
 }
+
+/* =========================================================
+   V5.36 — prévia frontal, grade conferível e zoom
+   ========================================================= */
+.geometryPreviewPanel{overflow:hidden;display:flex;flex-direction:column;max-height:96vh}
+.geometryPreviewGridSetup{display:grid;grid-template-columns:minmax(82px,110px) minmax(82px,110px) 1fr;gap:8px;align-items:end;margin:6px 0 8px}
+.geometryPreviewGridSetup label{display:grid;gap:4px;color:var(--muted);font-size:.72rem;font-weight:800}
+.geometryPreviewGridSetup input{padding:8px 9px;min-height:38px}
+.geometryPreviewGridSetup button{min-height:38px;justify-self:start;white-space:nowrap}
+.geometryPreviewViewBar{display:flex;align-items:center;gap:7px;overflow-x:auto;padding:2px 1px 8px;scrollbar-width:auto}
+.geometryPreviewViewBar button{padding:8px 10px;white-space:nowrap;min-height:40px}
+.geometryPreviewViewBar strong{min-width:52px;text-align:center;color:var(--primary-dark);font-size:.8rem}
+.geometryPreviewViewBar .activeTool{outline:2px solid var(--primary);background:var(--lilac-soft);color:var(--primary-dark)}
+.geometryPreviewViewport{flex:1;min-height:260px;max-height:62vh;overflow:auto!important;display:block!important;place-items:unset!important;padding:8px;background:#2f2b33;overscroll-behavior:contain;touch-action:none}
+#geometryPreviewCanvas{display:block!important;max-width:none!important;max-height:none!important;transform:none!important;transform-origin:top left;background:#fff;border-radius:8px;touch-action:none;cursor:crosshair;margin:0}
+#geometryPreviewCanvas.panMode{cursor:grab}
+#geometryPreviewCanvas.panMode.dragging{cursor:grabbing}
+.geometryPreviewViewport::-webkit-scrollbar,.geometryPreviewViewBar::-webkit-scrollbar{height:20px;width:20px}
+.geometryPreviewViewport::-webkit-scrollbar-thumb,.geometryPreviewViewBar::-webkit-scrollbar-thumb{background:#a78bfa;border-radius:14px;border:3px solid #eee2ff}
+.geometryPreviewViewport::-webkit-scrollbar-track,.geometryPreviewViewBar::-webkit-scrollbar-track{background:#eee2ff;border-radius:14px}
+@media(max-width:520px){
+  .geometryPreviewGridSetup{grid-template-columns:1fr 1fr}
+  .geometryPreviewGridSetup button{grid-column:1/-1;width:100%}
+  .geometryPreviewViewport{min-height:300px;max-height:58vh}
+}
