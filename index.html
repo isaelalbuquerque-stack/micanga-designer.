@@ -222,10 +222,10 @@
                 <option value="10">10 colunas</option>
                 <option value="12">12 colunas</option>
                 <option value="16">16 colunas</option>
-                <option value="20" selected>20 colunas</option>
+                <option value="20">20 colunas</option>
                 <option value="24">24 colunas</option>
                 <option value="28">28 colunas</option>
-                <option value="31">31 colunas</option>
+                <option value="31" selected>31 colunas</option>
                 <option value="32">32 colunas</option>
                 <option value="40">40 colunas</option>
                 <option value="50">50 colunas</option>
@@ -235,7 +235,7 @@
 
             <label>Linhas do diagrama
               <select id="imageRowsInput">
-                <option value="auto" selected>Automático pela imagem</option>
+                <option value="auto">Automático pela imagem</option>
                 <option value="8">8 linhas</option>
                 <option value="10">10 linhas</option>
                 <option value="12">12 linhas</option>
@@ -247,22 +247,49 @@
                 <option value="40">40 linhas</option>
                 <option value="50">50 linhas</option>
                 <option value="60">60 linhas</option>
+                <option value="61" selected>61 linhas</option>
               </select>
             </label>
           </div>
           <p class="helperText tableGuideText">A imagem será encaixada na proporção da tabela escolhida, sem esticar o desenho.</p>
 
           <div class="grid2">
+            <label>Leitura do desenho
+              <select id="imagePatternModeInput">
+                <option value="photo">Converter a fotografia</option>
+                <option value="repeat" selected>Reconstruir padrão repetido</option>
+              </select>
+            </label>
+            <label>Repetição do padrão
+              <select id="imagePatternRowsInput">
+                <option value="4">A cada 4 linhas</option>
+                <option value="5">A cada 5 linhas</option>
+                <option value="6" selected>A cada 6 linhas</option>
+                <option value="7">A cada 7 linhas</option>
+                <option value="8">A cada 8 linhas</option>
+              </select>
+            </label>
+          </div>
+          <label>Sequenciamento do padrão
+            <select id="imagePatternAxisInput">
+              <option value="both" selected>Linhas e colunas — bloco 6×6</option>
+              <option value="rows">Somente pelas linhas</option>
+              <option value="cols">Somente pelas colunas</option>
+            </select>
+          </label>
+          <p class="helperText tableGuideText">No padrão repetido, o app procura a sequência mais consistente no centro da peça, replica nas linhas e fecha a primeira e a última linha em branco.</p>
+
+          <div class="grid2">
             <label>Quantidade de cores
               <select id="imageColorsInput">
-                <option value="2">2 cores</option>
+                <option value="2" selected>2 cores</option>
                 <option value="3">3 cores</option>
                 <option value="4">4 cores</option>
                 <option value="5">5 cores</option>
                 <option value="6">6 cores</option>
                 <option value="8">8 cores</option>
                 <option value="10">10 cores</option>
-                <option value="12" selected>12 cores</option>
+                <option value="12">12 cores</option>
                 <option value="16">16 cores</option>
                 <option value="24">24 cores</option>
                 <option value="32">32 cores</option>
@@ -276,6 +303,13 @@
               </select>
             </label>
           </div>
+
+          <label>Cores do diagrama
+            <select id="imageRealColorsInput">
+              <option value="real" selected>Fixar cores reais — branco é branco</option>
+              <option value="photo">Manter tonalidades da fotografia</option>
+            </select>
+          </label>
 
           <label>Fundo da imagem
             <select id="backgroundModeInput">

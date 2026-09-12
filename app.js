@@ -865,6 +865,40 @@ function nearestPaletteId(r,g,b,palette){
   return best?.id || null;
 }
 
+function lockDetectedColorsToRealPalette(imagePalette){
+  if(!imagePalette.length)return imagePalette;
+  let brightest=imagePalette[0];
+  for(const color of imagePalette){
+    const rgb=color.rgb||[0,0,0];
+    if((rgb[0]+rgb[1]+rgb[2])>(brightest.rgb[0]+brightest.rgb[1]+brightest.rgb[2]))brightest=color;
+  }
+  imagePalette.forEach(color=>{
+    const [r,g,b]=color.rgb;
+    const max=Math.max(r,g,b),min=Math.min(r,g,b);
+    const saturation=max?((max-min)/max):0;
+    let real;
+    // A conta branca fotografada costuma ficar cinza por sombra/exposição.
+    if(color===brightest&&saturation<.28&&(r+g+b)/3>115){
+      real=defaultPalette.find(c=>c.id==="c2");
+    }else{
+      // Corrige a iluminação procurando a cor comercial mais próxima, mas dá
+      // preferência às famílias cromáticas para não trocar vermelho por cinza.
+      const candidates=saturation>.22
+        ? defaultPalette.filter(c=>{
+            const cr=parseInt(c.hex.slice(1,3),16),cg=parseInt(c.hex.slice(3,5),16),cb=parseInt(c.hex.slice(5,7),16);
+            return Math.max(cr,cg,cb)-Math.min(cr,cg,cb)>35;
+          })
+        : defaultPalette;
+      real=candidates.reduce((best,c)=>{
+        const cr=parseInt(c.hex.slice(1,3),16),cg=parseInt(c.hex.slice(3,5),16),cb=parseInt(c.hex.slice(5,7),16);
+        return !best||colorDistance([r,g,b],[cr,cg,cb])<best.distance?{color:c,distance:colorDistance([r,g,b],[cr,cg,cb])}:best;
+      },null)?.color;
+    }
+    if(real){color.name=real.name;color.code=real.code;color.hex=real.hex}
+  });
+  return imagePalette;
+}
+
 function cropTransparentBounds(ctx,w,h,bgMode){
   const data=ctx.getImageData(0,0,w,h).data;
   const border=borderBackgroundColor(ctx,w,h);
@@ -917,6 +951,46 @@ function buildCleanCaptureMask(cells,threshold){
   return mask;
 }
 
+function paletteLuminance(color){
+  const hex=color.hex||"#000000";
+  const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+  return .2126*r+.7152*g+.0722*b;
+}
+
+function rebuildRepeatingPattern(grid,palette,period,axis="both"){
+  const rows=grid.length,cols=grid[0]?.length||0;
+  if(rows<3||!cols||!palette.length) return grid;
+  const white=[...palette].sort((a,b)=>paletteLuminance(b)-paletteLuminance(a))[0].id;
+  const yStart=Math.max(1,Math.floor(rows*.20)),yEnd=Math.min(rows-1,Math.ceil(rows*.80));
+  const xStart=Math.max(1,Math.floor(cols*.15)),xEnd=Math.min(cols-1,Math.ceil(cols*.85));
+  const tileCols=axis==="rows"?cols:period;
+  const tileRows=axis==="cols"?rows:period;
+  const template=Array.from({length:tileRows},()=>Array(tileCols).fill(white));
+  const scanYStart=axis==="cols"?1:yStart,scanYEnd=axis==="cols"?rows-1:yEnd;
+  const scanXStart=axis==="rows"?1:xStart,scanXEnd=axis==="rows"?cols-1:xEnd;
+
+  for(let ty=0;ty<tileRows;ty++) for(let tx=0;tx<tileCols;tx++){
+    const counts=new Map();
+    for(let y=scanYStart;y<scanYEnd;y++) for(let x=scanXStart;x<scanXEnd;x++){
+      const matchesY=axis==="cols"?y===ty:(y-1)%period===ty;
+      const matchesX=axis==="rows"?x===tx:(x-1)%period===tx;
+      if(!matchesY||!matchesX)continue;
+      const id=grid[y][x];if(id)counts.set(id,(counts.get(id)||0)+1);
+    }
+    let best=white,bestCount=-1;
+    counts.forEach((count,id)=>{if(count>bestCount){best=id;bestCount=count}});
+    template[ty][tx]=best;
+  }
+
+  const rebuilt=Array.from({length:rows},(_,y)=>Array.from({length:cols},(_,x)=>{
+    if(y===0||y===rows-1||x===0||x===cols-1)return white;
+    const ty=axis==="cols"?y:(y-1)%period;
+    const tx=axis==="rows"?x:(x-1)%period;
+    return template[ty]?.[tx]||white;
+  }));
+  return rebuilt;
+}
+
 async function generateProjectFromImage(){
   if(!uploadedImage){
     toast("Escolha uma imagem primeiro");
@@ -928,6 +1002,10 @@ async function generateProjectFromImage(){
   const maxColors=Math.max(2,Math.min(32,Number($("imageColorsInput").value)||12));
   const bgMode=$("backgroundModeInput").value;
   const fidelityMode=$("imageFidelityInput")?.value||"faithful";
+  const useRealColors=($("imageRealColorsInput")?.value||"real")==="real";
+  const patternMode=$("imagePatternModeInput")?.value||"photo";
+  const patternRows=Math.max(2,Math.min(20,Number($("imagePatternRowsInput")?.value)||6));
+  const patternAxis=$("imagePatternAxisInput")?.value||"both";
   const faithful=fidelityMode==="faithful";
   const sensitivity=Number($("imageSensitivityInput")?.value)||0.10;
   const name=$("imageProjectName").value.trim()||"Brinco convertido";
@@ -980,6 +1058,7 @@ async function generateProjectFromImage(){
     toast("Não consegui identificar as cores da imagem. Tente Fidelidade máxima.");
     return;
   }
+  if(useRealColors)lockDetectedColorsToRealPalette(imgPalette);
 
   const grid=Array.from({length:rows},()=>Array(cols).fill(null));
   for(let y=0;y<rows;y++){
@@ -989,16 +1068,17 @@ async function generateProjectFromImage(){
       grid[y][x]=nearestPaletteId(...info.rgb,imgPalette);
     }
   }
+  const finalGrid=patternMode==="repeat"?rebuildRepeatingPattern(grid,imgPalette,patternRows,patternAxis):grid;
 
   project={
     id:uid(),name,rows,cols,beadSize:3,technique:"Grade reta",
-    palette:imgPalette.map(({rgb,...rest})=>rest),grid,
+    palette:imgPalette.map(({rgb,...rest})=>rest),grid:finalGrid,
     createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),
     source:"image",captureMode:fidelityMode,
     detectedColorIds:imgPalette.map(c=>c.id),
     sourceImage:$("imagePreview")?.src||null,
     captureCrop:crop,objectCrop,
-    captureTable:{rows,cols}
+    captureTable:{rows,cols},patternMode,patternRows,patternAxis,useRealColors
   };
 
   selectedColor=project.palette[0].id;
@@ -1378,6 +1458,13 @@ $("galleryImageBtn").onclick=()=>{
 $("cameraImageInput").onchange=(e)=>loadImageFromInput(e.target);
 $("imageInput").onchange=(e)=>loadImageFromInput(e.target);
 $("generateFromImageBtn").onclick=generateProjectFromImage;
+$("imagePatternModeInput").onchange=(e)=>{
+  if(e.target.value!=="repeat")return;
+  $("imageColsInput").value="31";
+  $("imageRowsInput").value="61";
+  $("imageColorsInput").value="2";
+  toast("Padrão repetido: tabela ajustada para 31 × 61 e 2 cores");
+};
 $("captureAddColorBtn").onclick=()=>$("addColorBtn").click();
 $("cancelNewBtn").onclick=()=>showView("homeView");
 $("createProjectBtn").onclick=()=>{

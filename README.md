@@ -1,3 +1,30 @@
+# V5.27 — Cores reais
+
+- Nova opção Fixar cores reais, ativada por padrão na captura.
+- A cor neutra mais clara da peça é normalizada para Branco `#FFFFFF`, mesmo quando a sombra da fotografia a deixa cinza.
+- Cores cromáticas são aproximadas para a família real correspondente da paleta de miçangas.
+- A opção Manter tonalidades da fotografia continua disponível.
+- Mantido o sequenciamento 6×6 por linhas e colunas da V5.26.
+
+# V5.26 — Sequenciamento vertical e horizontal
+
+- O modo repetido passa a analisar linhas e colunas simultaneamente.
+- Em tabelas 31×61 com repetição 6, identifica um bloco central 6×6 por consenso.
+- O bloco é replicado cinco vezes na horizontal e dez vezes na vertical.
+- Primeira/última linha e primeira/última coluna são fechadas com a cor mais clara detectada.
+- Também é possível escolher análise somente por linhas ou somente por colunas.
+- Mantidas a coluna de correção de cores e a conversão comum da fotografia.
+
+# V5.25 — Reconstrução de padrão repetido
+
+- Novo modo Reconstruir padrão repetido.
+- Para o modelo de referência, configura automaticamente 31 colunas, 61 linhas e 2 cores.
+- Procura na região central da peça a sequência mais consistente de 6 linhas.
+- Replica o bloco detectado mantendo o alinhamento das 31 colunas.
+- Primeira e última linhas são fechadas com 31 miçangas da cor mais clara detectada.
+- A repetição pode ser alterada para blocos de 4 a 8 linhas.
+- O modo comum de conversão da fotografia permanece disponível.
+
 # V5.24 — Captura orientada pela tabela
 
 - Adicionada a opção de tabela com 31 colunas em Foto → Diagrama.
