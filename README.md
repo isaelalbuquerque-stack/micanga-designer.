@@ -1,3 +1,12 @@
+# JPmiçangas Designer V5.39
+
+- Prévia da geometria agora abre em **tela cheia**, sem painel flutuante.
+- A tabela da prévia mantém tamanho legível como no editor; quando não cabe na largura, usa rolagem em vez de virar miniatura.
+- Correção crítica do recorte de **6 pontos**: os seis pontos passam a participar da transformação da imagem, inclusive os dois pontos laterais centrais.
+- A área selecionada é retificada por seis setores triangulares, preservando a silhueta escolhida antes da detecção.
+- Mantidos edição célula por célula, zoom, mover, linhas/colunas, lupa e ações acima da barra inferior do celular.
+- Cache do PWA atualizado para V5.39.
+
 # JPmiçangas Designer V5.38
 
 - Prévia ajustada para funcionar como uma **tabela editável no padrão do editor**, preservando edição, mover, zoom, linhas/colunas e correção célula por célula.

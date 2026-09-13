@@ -1268,3 +1268,53 @@ body.editor-mode .topbar p{font-size:.72rem;white-space:nowrap;overflow:hidden;t
   }
   #imagePointMagnifierCanvas{width:130px;height:130px}
 }
+
+/* =========================================================
+   V5.39 — prévia em tela cheia + tabela grande como o editor
+   ========================================================= */
+.geometryPreviewModal{
+  inset:0;
+  padding:0!important;
+  background:var(--bg);
+  display:block;
+}
+.geometryPreviewPanel{
+  width:100%!important;
+  max-width:none!important;
+  height:100dvh!important;
+  max-height:100dvh!important;
+  border-radius:0!important;
+  padding:max(8px,env(safe-area-inset-top)) 8px 0!important;
+  box-shadow:none!important;
+  overflow:hidden!important;
+}
+.geometryPreviewHead{flex:0 0 auto}
+.geometryPreviewEditBar,.geometryPreviewGridSetup,.geometryPreviewViewBar,.geometryPreviewPalette{flex:0 0 auto}
+.geometryPreviewViewport{
+  flex:1 1 auto!important;
+  min-height:0!important;
+  max-height:none!important;
+  width:100%!important;
+  border-radius:12px!important;
+  background:var(--grid-bg)!important;
+  padding:8px!important;
+}
+#geometryPreviewCanvas{
+  margin:0!important;
+  box-shadow:0 0 0 1px var(--border);
+}
+.geometryPreviewActions{
+  flex:0 0 auto;
+  position:relative!important;
+  bottom:auto!important;
+  margin:6px -8px 0!important;
+  padding:8px 8px calc(8px + env(safe-area-inset-bottom))!important;
+}
+@media(max-width:520px){
+  .geometryPreviewPanel{padding:max(4px,env(safe-area-inset-top)) 4px 0!important}
+  .geometryPreviewEditBar small{display:none}
+  .geometryPreviewGridSetup{margin:4px 0 5px}
+  .geometryPreviewViewBar{margin-bottom:3px}
+  .geometryPreviewPalette{padding-bottom:5px}
+  .geometryPreviewActions{margin:5px -4px 0!important;padding-left:4px!important;padding-right:4px!important}
+}

@@ -1161,6 +1161,29 @@ function renderAdjustedImageToCanvas(canvas,maxSide=2400){
   const srcScale=Math.min(1,maxSide/Math.max(uploadedImage.naturalWidth,uploadedImage.naturalHeight));
   const sw=Math.max(1,Math.round(uploadedImage.naturalWidth*srcScale)),sh=Math.max(1,Math.round(uploadedImage.naturalHeight*srcScale));
   const src=document.createElement("canvas");src.width=sw;src.height=sh;const sx=src.getContext("2d",{willReadFrequently:true});sx.imageSmoothingEnabled=true;sx.imageSmoothingQuality="high";sx.drawImage(uploadedImage,0,0,sw,sh);applyManualCropMask(sx,sw,sh);
+
+  // V5.39: quando o ajuste de 6 pontos estiver ativo, TODOS os seis pontos
+  // participam da retificação. A V5.38 reduzia a geometria a 4 extremos,
+  // descartando os dois pontos laterais centrais durante a transformação.
+  if(imageSixPoints && imageCropPoints.length===6){
+    const sp=imageSixPoints.map(p=>({x:p.x*sw,y:p.y*sh}));
+    const xs=sp.map(p=>p.x),ys=sp.map(p=>p.y);
+    const bw=Math.max(64,Math.max(...xs)-Math.min(...xs));
+    const bh=Math.max(64,Math.max(...ys)-Math.min(...ys));
+    const outScale=Math.min(1,maxSide/Math.max(bw,bh));
+    const dw=Math.max(64,Math.round(bw*outScale)),dh=Math.max(64,Math.round(bh*outScale));
+    canvas.width=dw;canvas.height=dh;
+    const ctx=canvas.getContext("2d",{willReadFrequently:true});ctx.clearRect(0,0,dw,dh);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
+    const sc={x:sp.reduce((n,p)=>n+p.x,0)/6,y:sp.reduce((n,p)=>n+p.y,0)/6};
+    const dp=[{x:dw*.28,y:0},{x:dw*.72,y:0},{x:dw,y:dh*.50},{x:dw*.72,y:dh},{x:dw*.28,y:dh},{x:0,y:dh*.50}];
+    const dc={x:dw/2,y:dh/2};
+    for(let i=0;i<6;i++){
+      const j=(i+1)%6;
+      drawWarpTriangle(ctx,src,[sc,sp[i],sp[j]],[dc,dp[i],dp[j]]);
+    }
+    return ctx;
+  }
+
   const q=(imageQuad||defaultImageQuad()).map(p=>({x:p.x*sw,y:p.y*sh}));
   const top=Math.hypot(q[1].x-q[0].x,q[1].y-q[0].y),bottom=Math.hypot(q[2].x-q[3].x,q[2].y-q[3].y),left=Math.hypot(q[3].x-q[0].x,q[3].y-q[0].y),right=Math.hypot(q[2].x-q[1].x,q[2].y-q[1].y);
   let dw=Math.max(64,Math.round((top+bottom)/2)),dh=Math.max(64,Math.round((left+right)/2));const outScale=Math.min(1,maxSide/Math.max(dw,dh));dw=Math.max(1,Math.round(dw*outScale));dh=Math.max(1,Math.round(dh*outScale));
@@ -1426,7 +1449,10 @@ function setGeometryPreviewZoom(next,focusClientX=null,focusClientY=null){
 }
 function fitGeometryPreviewWidth(){
   const viewport=$("geometryPreviewViewport"),canvas=$("geometryPreviewCanvas");if(!viewport||!canvas)return;
-  setGeometryPreviewZoom(Math.max(.10,Math.min(2,(viewport.clientWidth-18)/canvas.width)));
+  // V5.39: não encolhe a tabela até virar uma miniatura. Mantém as células
+  // legíveis como no editor normal e usa rolagem horizontal quando necessário.
+  const natural=(viewport.clientWidth-18)/canvas.width;
+  setGeometryPreviewZoom(Math.max(.85,Math.min(2,natural)));
   viewport.scrollLeft=0;viewport.scrollTop=0;
 }
 function resetGeometryPreviewZoom(){
