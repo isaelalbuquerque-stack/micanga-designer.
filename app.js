@@ -1449,9 +1449,8 @@ function setGeometryPreviewZoom(next,focusClientX=null,focusClientY=null){
 }
 function fitGeometryPreviewWidth(){
   const viewport=$("geometryPreviewViewport"),canvas=$("geometryPreviewCanvas");if(!viewport||!canvas)return;
-  // V5.40: a prévia abre em 100% como o editor manual. Não reduz automaticamente
-  // a tabela para caber na tela; a navegação é feita por rolagem/mover.
-  setGeometryPreviewZoom(1);
+  const zx=(viewport.clientWidth-14)/canvas.width;
+  setGeometryPreviewZoom(Math.max(.10,Math.min(5,zx)));
   viewport.scrollLeft=0;viewport.scrollTop=0;
 }
 function resetGeometryPreviewZoom(){
@@ -1548,7 +1547,7 @@ function rebuildGeometryPreview(){
   const detected=convertGeometricTwoColorBeads(setup.ctx,setup.crop,setup.cols,setup.rows);
   geometryPreviewState={work:setup.work,crop:setup.crop,cols:setup.cols,rows:setup.rows,grid:detected.grid.map(r=>r.slice()),palette:detected.palette.map(c=>({...c}))};
   geometryPreviewTool="paint";geometryPreviewColorId=detected.palette.find(c=>c.id==="capture_red")?.id||detected.palette[0]?.id;
-  geometryPreviewZoom=1;renderGeometryPreview();setTimeout(fitGeometryPreviewWidth,0);toast(`Grade atualizada para ${setup.rows} × ${setup.cols}`);
+  geometryPreviewZoom=1;renderGeometryPreview();setTimeout(resetGeometryPreviewZoom,0);toast(`Grade atualizada para ${setup.rows} × ${setup.cols}`);
 }
 function showGeometryPreview(){
   if(!uploadedImage){toast("Escolha uma imagem primeiro");return}
@@ -1557,7 +1556,7 @@ function showGeometryPreview(){
   geometryPreviewState={work,crop,cols,rows,grid:detected.grid.map(r=>r.slice()),palette:detected.palette.map(c=>({...c}))};
   geometryPreviewTool="paint";geometryPreviewColorId=detected.palette.find(c=>c.id==="capture_red")?.id||detected.palette[0]?.id;
   geometryPreviewZoom=1;geometryPreviewMode="edit";
-  renderGeometryPreview();$("geometryPreviewModal").classList.remove("hidden");setTimeout(fitGeometryPreviewWidth,30);
+  renderGeometryPreview();$("geometryPreviewModal").classList.remove("hidden");setTimeout(resetGeometryPreviewZoom,30);
 }
 function closeGeometryPreview(){$("geometryPreviewModal")?.classList.add("hidden");geometryPreviewPan=null}
 

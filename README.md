@@ -1,3 +1,14 @@
+# JPmiçangas Designer V5.41
+
+- Prévia de geometria reorganizada no mesmo padrão visual compacto do editor manual.
+- Controles de Linhas, Colunas e Atualizar ficaram em uma única faixa baixa.
+- Barra Editar/Mover/Zoom/Largura/Inteira foi reduzida para liberar mais espaço vertical.
+- Paleta virou uma faixa horizontal compacta com botão + no canto.
+- Texto explicativo abaixo da tabela foi removido; a área de edição agora ocupa o espaço livre da tela.
+- A prévia abre em 100%; Largura e Inteira continuam como comandos opcionais.
+- Mantida sem alterações a geometria manual de 6 pontos e o recorte real da V5.40.
+- Cache PWA atualizado para V5.41.
+
 # JPmiçangas Designer V5.40
 
 - O ajuste manual de **6 pontos passa a definir o recorte real da captura**.

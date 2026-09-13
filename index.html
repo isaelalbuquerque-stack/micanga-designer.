@@ -384,32 +384,28 @@
           <div><strong>Prévia da geometria</strong><small id="geometryPreviewInfo">Confira a posição das miçangas antes de gerar.</small></div>
           <button id="closeGeometryPreviewBtn" type="button" class="secondary">✕</button>
         </div>
-        <div class="geometryPreviewEditBar">
-          <div>
-            <strong>Conferência da grade</strong>
-            <small>Veja a peça de frente, confira linhas/colunas e corrija célula por célula.</small>
-          </div>
-          <button id="geometryPreviewAddColorBtn" type="button" class="secondary">＋ Cor</button>
-          <input id="geometryPreviewColorInput" type="color" value="#d8342a" class="hidden" />
-        </div>
         <div class="geometryPreviewGridSetup" aria-label="Conferir linhas e colunas">
-          <label>Linhas<input id="geometryPreviewRowsInput" type="number" min="2" max="100" inputmode="numeric" /></label>
-          <label>Colunas<input id="geometryPreviewColsInput" type="number" min="2" max="100" inputmode="numeric" /></label>
-          <button id="geometryPreviewRebuildBtn" type="button" class="secondary">↻ Atualizar grade</button>
+          <label><span>Linhas</span><input id="geometryPreviewRowsInput" type="number" min="2" max="100" inputmode="numeric" /></label>
+          <label><span>Colunas</span><input id="geometryPreviewColsInput" type="number" min="2" max="100" inputmode="numeric" /></label>
+          <button id="geometryPreviewRebuildBtn" type="button" class="secondary">↻ Atualizar</button>
         </div>
         <div class="geometryPreviewViewBar" aria-label="Zoom e movimentação da prévia">
-          <button id="geometryPreviewEditBtn" type="button" class="secondary activeTool">✏️ Editar</button>
-          <button id="geometryPreviewPanBtn" type="button" class="secondary">✋ Mover</button>
-          <button id="geometryPreviewZoomOutBtn" type="button" class="secondary">−</button>
+          <button id="geometryPreviewEditBtn" type="button" class="secondary activeTool" title="Editar miçangas">✏️ <span>Editar</span></button>
+          <button id="geometryPreviewPanBtn" type="button" class="secondary" title="Mover a grade">✋ <span>Mover</span></button>
+          <button id="geometryPreviewZoomOutBtn" type="button" class="secondary" title="Diminuir zoom">−</button>
           <strong id="geometryPreviewZoomLabel">100%</strong>
-          <button id="geometryPreviewZoomInBtn" type="button" class="secondary">＋</button>
+          <button id="geometryPreviewZoomInBtn" type="button" class="secondary" title="Aumentar zoom">＋</button>
           <button id="geometryPreviewZoom100Btn" type="button" class="secondary">100%</button>
-          <button id="geometryPreviewFitWidthBtn" type="button" class="secondary">↔ Largura</button>
-          <button id="geometryPreviewFitBtn" type="button" class="secondary">▣ Inteira</button>
+          <button id="geometryPreviewFitWidthBtn" type="button" class="secondary">↔ <span>Largura</span></button>
+          <button id="geometryPreviewFitBtn" type="button" class="secondary">▣ <span>Inteira</span></button>
         </div>
-        <div id="geometryPreviewPalette" class="geometryPreviewPalette" aria-label="Cores para corrigir a prévia"></div>
+        <div class="geometryPreviewPaletteRow">
+          <strong>Cores</strong>
+          <div id="geometryPreviewPalette" class="geometryPreviewPalette" aria-label="Cores para corrigir a prévia"></div>
+          <button id="geometryPreviewAddColorBtn" type="button" class="secondary geometryPreviewAddColor" title="Adicionar cor">＋</button>
+          <input id="geometryPreviewColorInput" type="color" value="#d8342a" class="hidden" />
+        </div>
         <div id="geometryPreviewViewport" class="geometryPreviewViewport"><canvas id="geometryPreviewCanvas"></canvas></div>
-        <p class="helperText">As letras no topo e os números na lateral funcionam como a tabela manual. Em ✏️ Editar você insere, troca ou remove miçangas; em ✋ Mover arraste a grade nos dois eixos.</p>
         <div class="rowBtns geometryPreviewActions">
           <button id="backGeometryPreviewBtn" type="button" class="secondary">← Voltar e corrigir</button>
           <button id="confirmGeometryBtn" type="button" class="primary">✓ Gerar diagrama</button>
