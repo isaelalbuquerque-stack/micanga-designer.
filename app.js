@@ -1162,25 +1162,23 @@ function renderAdjustedImageToCanvas(canvas,maxSide=2400){
   const sw=Math.max(1,Math.round(uploadedImage.naturalWidth*srcScale)),sh=Math.max(1,Math.round(uploadedImage.naturalHeight*srcScale));
   const src=document.createElement("canvas");src.width=sw;src.height=sh;const sx=src.getContext("2d",{willReadFrequently:true});sx.imageSmoothingEnabled=true;sx.imageSmoothingQuality="high";sx.drawImage(uploadedImage,0,0,sw,sh);applyManualCropMask(sx,sw,sh);
 
-  // V5.39: quando o ajuste de 6 pontos estiver ativo, TODOS os seis pontos
-  // participam da retificação. A V5.38 reduzia a geometria a 4 extremos,
-  // descartando os dois pontos laterais centrais durante a transformação.
+  // V5.40: os 6 pontos NÃO são mais transformados para um molde pré-definido.
+  // O recorte manual do usuário passa a ser a própria fonte da captura:
+  // preserva exatamente a silhueta/polígono editado e ignora tudo que ficou fora.
   if(imageSixPoints && imageCropPoints.length===6){
     const sp=imageSixPoints.map(p=>({x:p.x*sw,y:p.y*sh}));
     const xs=sp.map(p=>p.x),ys=sp.map(p=>p.y);
-    const bw=Math.max(64,Math.max(...xs)-Math.min(...xs));
-    const bh=Math.max(64,Math.max(...ys)-Math.min(...ys));
+    const minX=Math.max(0,Math.floor(Math.min(...xs))),maxX=Math.min(sw,Math.ceil(Math.max(...xs)));
+    const minY=Math.max(0,Math.floor(Math.min(...ys))),maxY=Math.min(sh,Math.ceil(Math.max(...ys)));
+    const bw=Math.max(1,maxX-minX),bh=Math.max(1,maxY-minY);
     const outScale=Math.min(1,maxSide/Math.max(bw,bh));
-    const dw=Math.max(64,Math.round(bw*outScale)),dh=Math.max(64,Math.round(bh*outScale));
+    const dw=Math.max(1,Math.round(bw*outScale)),dh=Math.max(1,Math.round(bh*outScale));
     canvas.width=dw;canvas.height=dh;
-    const ctx=canvas.getContext("2d",{willReadFrequently:true});ctx.clearRect(0,0,dw,dh);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
-    const sc={x:sp.reduce((n,p)=>n+p.x,0)/6,y:sp.reduce((n,p)=>n+p.y,0)/6};
-    const dp=[{x:dw*.28,y:0},{x:dw*.72,y:0},{x:dw,y:dh*.50},{x:dw*.72,y:dh},{x:dw*.28,y:dh},{x:0,y:dh*.50}];
-    const dc={x:dw/2,y:dh/2};
-    for(let i=0;i<6;i++){
-      const j=(i+1)%6;
-      drawWarpTriangle(ctx,src,[sc,sp[i],sp[j]],[dc,dp[i],dp[j]]);
-    }
+    const ctx=canvas.getContext("2d",{willReadFrequently:true});
+    ctx.clearRect(0,0,dw,dh);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
+    // A origem é somente deslocada para a caixa delimitadora do recorte; não há
+    // retificação, hexágono ideal, expansão lateral nem reconstrução da forma.
+    ctx.drawImage(src,minX,minY,bw,bh,0,0,dw,dh);
     return ctx;
   }
 
@@ -1411,7 +1409,9 @@ function captureSetupForPreview(){
   if(!objectCrop){toast("Não consegui ler a área selecionada");return null}
   const aspect=objectCrop.h/objectCrop.w;
   const rows=rowsChoice==="auto"?Math.max(2,Math.min(100,Math.round(cols*aspect))):Math.max(2,Math.min(100,Number(rowsChoice)||Math.round(cols*aspect)));
-  const crop=fitCropToGrid(objectCrop,work.width,work.height,cols,rows);
+  // V5.40: usa diretamente a caixa do recorte manual mascarado. Não amplia
+  // a seleção para um retângulo de proporção pré-definida pelo editor.
+  const crop={...objectCrop};
   return {work,ctx,crop,cols,rows};
 }
 
@@ -1449,10 +1449,9 @@ function setGeometryPreviewZoom(next,focusClientX=null,focusClientY=null){
 }
 function fitGeometryPreviewWidth(){
   const viewport=$("geometryPreviewViewport"),canvas=$("geometryPreviewCanvas");if(!viewport||!canvas)return;
-  // V5.39: não encolhe a tabela até virar uma miniatura. Mantém as células
-  // legíveis como no editor normal e usa rolagem horizontal quando necessário.
-  const natural=(viewport.clientWidth-18)/canvas.width;
-  setGeometryPreviewZoom(Math.max(.85,Math.min(2,natural)));
+  // V5.40: a prévia abre em 100% como o editor manual. Não reduz automaticamente
+  // a tabela para caber na tela; a navegação é feita por rolagem/mover.
+  setGeometryPreviewZoom(1);
   viewport.scrollLeft=0;viewport.scrollTop=0;
 }
 function resetGeometryPreviewZoom(){

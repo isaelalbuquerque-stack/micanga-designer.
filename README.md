@@ -1,3 +1,13 @@
+# JPmiçangas Designer V5.40
+
+- O ajuste manual de **6 pontos passa a definir o recorte real da captura**.
+- Removida a transformação do recorte para um molde/hexágono pré-definido.
+- A leitura usa exatamente o polígono editado pelo usuário; tudo fora dele fica transparente e é ignorado.
+- A caixa usada pela detecção vem diretamente do recorte manual, sem expandir para a proporção da tabela.
+- A prévia abre em **100%**, usando rolagem/mover para navegar em tabelas grandes em vez de encolher automaticamente.
+- Mantidos edição célula por célula, zoom, mover, linhas/colunas, lupa e botões acima da barra inferior.
+- Cache do PWA atualizado para V5.40.
+
 # JPmiçangas Designer V5.39
 
 - Prévia da geometria agora abre em **tela cheia**, sem painel flutuante.
