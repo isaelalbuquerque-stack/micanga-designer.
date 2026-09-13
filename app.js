@@ -2045,7 +2045,7 @@ function finishGeometryPreviewPan(e){
 $("geometryPreviewCanvas")?.addEventListener("pointerup",finishGeometryPreviewPan);
 $("geometryPreviewCanvas")?.addEventListener("pointercancel",finishGeometryPreviewPan);
 
-// V5.37: zoom por pinça diretamente na prévia, independente do modo Editar/Mover.
+// V5.38: zoom por pinça na prévia + ações móveis preservadas acima da área segura.
 {
   const vp=$("geometryPreviewViewport");
   if(vp){

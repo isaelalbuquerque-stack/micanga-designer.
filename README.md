@@ -1,3 +1,12 @@
+# JPmiçangas Designer V5.38
+
+- Prévia ajustada para funcionar como uma **tabela editável no padrão do editor**, preservando edição, mover, zoom, linhas/colunas e correção célula por célula.
+- Barra inferior da prévia agora fica **fixa e sempre visível**, com **Voltar e corrigir** e **Gerar diagrama** acima da navegação do celular.
+- Aplicada a **área segura do Android/iPhone** (`safe-area`) para impedir que controles fiquem atrás da barra inferior do sistema.
+- A **lupa de ajuste fino** agora fica fixa acima da barra inferior do celular em telas pequenas.
+- Mantidos zoom por pinça, `−`, `+`, `100%`, `Largura` e `Inteira` da V5.37.
+- Cache do PWA atualizado para V5.38.
+
 # JPmiçangas Designer V5.37
 
 - Prévia abre em **Ajustar à largura**, evitando o diagrama estreito demais.

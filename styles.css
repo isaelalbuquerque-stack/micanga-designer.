@@ -1217,3 +1217,54 @@ body.editor-mode .topbar p{font-size:.72rem;white-space:nowrap;overflow:hidden;t
   .geometryPreviewViewBar strong{min-width:46px}
   .geometryPreviewViewport{min-height:340px;max-height:60vh}
 }
+
+
+/* =========================================================
+   V5.38 — área segura móvel + ações da prévia sempre visíveis
+   ========================================================= */
+.geometryPreviewModal{
+  padding-bottom:max(12px, env(safe-area-inset-bottom));
+}
+.geometryPreviewPanel{
+  max-height:calc(100dvh - max(18px, env(safe-area-inset-top)) - max(18px, env(safe-area-inset-bottom)));
+}
+.geometryPreviewActions{
+  position:sticky;
+  bottom:0;
+  z-index:20;
+  margin:6px -4px -4px;
+  padding:8px 4px calc(8px + env(safe-area-inset-bottom));
+  background:rgba(255,255,255,.98);
+  border-top:1px solid var(--border);
+  box-shadow:0 -8px 18px rgba(80,45,110,.10);
+}
+.geometryPreviewActions button{
+  min-height:46px;
+  font-weight:800;
+}
+@media(max-width:520px){
+  .geometryPreviewModal{
+    align-items:stretch;
+    padding:4px 4px max(4px, env(safe-area-inset-bottom));
+  }
+  .geometryPreviewPanel{
+    max-height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 8px);
+    height:100%;
+  }
+  .geometryPreviewViewport{
+    min-height:220px;
+    max-height:none;
+  }
+  /* Lupa do ajuste fino: fica acima da navegação inferior do Android. */
+  .imagePointMagnifier:not(.hidden){
+    position:fixed;
+    top:auto;
+    right:10px;
+    bottom:calc(76px + env(safe-area-inset-bottom));
+    z-index:10020;
+    float:none;
+    margin:0;
+    width:154px;
+  }
+  #imagePointMagnifierCanvas{width:130px;height:130px}
+}
